@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react'
-import { Upload, FileText, X, AlertCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase, BUCKET, getPublicUrl } from '../lib/supabase'
 import type { User } from '@supabase/supabase-js'
@@ -16,8 +15,8 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
   const [error, setError] = useState<string | null>(null)
 
   const validate = (file: File): string | null => {
-    if (!file.name.endsWith('.txt')) return 'Only .txt files are supported.'
-    if (file.size > 5 * 1024 * 1024) return 'File must be under 5 MB.'
+    if (!file.name.endsWith('.txt')) return 'ONLY .TXT TRANSMISSIONS ALLOWED'
+    if (file.size > 5 * 1024 * 1024) return 'PAYLOAD EXCEEDS 5MB LIMIT'
     return null
   }
 
@@ -26,6 +25,7 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
     if (err) {
       setError(err)
       setSelectedFile(null)
+      toast.error(err)
       return
     }
     setError(null)
@@ -58,7 +58,6 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
     setError(null)
 
     try {
-      // Create a unique path: userId/timestamp-filename
       const safeName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
       const filePath = `${user.id}/${Date.now()}-${safeName}`
 
@@ -75,7 +74,7 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
       const shareLink = `${window.location.origin}/view?path=${encodeURIComponent(filePath)}`
 
       await navigator.clipboard.writeText(shareLink)
-      toast.success('Link copied to clipboard!')
+      toast.success('DROP LINK COPIED TO CLIPBOARD!')
 
       onUploadSuccess({
         name: selectedFile.name,
@@ -86,7 +85,7 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
       })
       setSelectedFile(null)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Upload failed. Please try again.'
+      const message = err instanceof Error ? err.message : 'TRANSMISSION FAILED'
       setError(message)
       toast.error(message)
     } finally {
@@ -94,178 +93,121 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
     }
   }
 
-  // --- Not logged in ---
   if (!user) {
     return (
-      <div className="glass rounded-2xl p-8 text-center space-y-4 animate-fade-in-up">
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
-            background: 'rgba(99,102,241,0.12)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto',
-          }}
-        >
-          <Upload size={28} color="#818cf8" />
+      <div className="bg-[#171f33] border-2 border-[#ddb7ff] shadow-[8px_8px_0px_0px_rgba(221,183,255,0.3)]">
+        {/* Terminal Header Bar */}
+        <div className="bg-[#222a3d] border-b-2 border-[#ddb7ff] px-4 py-2 flex items-center justify-between font-headline text-xs text-[#ddb7ff]">
+          <span className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">terminal</span>
+            UPLOAD_TERMINAL.EXE
+          </span>
+          <span className="text-[#988d9f]">SYSTEM_LOCKED</span>
         </div>
-        <h3 style={{ fontWeight: 600, fontSize: '1.125rem', color: '#f4f4f5' }}>Upload a .txt File</h3>
-        <p style={{ color: '#71717a', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          Please <strong style={{ color: '#818cf8' }}>sign in</strong> to upload files to BoxedLinks.
-          <br />
-          Anyone with a link can view your files — no account needed to read.
-        </p>
+
+        <div className="p-8 text-center flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-2 border-[#ddb7ff] bg-[#0b1326] flex items-center justify-center text-[#ddb7ff]">
+            <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              lock
+            </span>
+          </div>
+          <div>
+            <h3 className="font-headline font-bold text-lg text-[#ddb7ff] uppercase">AUTHENTICATION REQUIRED</h3>
+            <p className="font-mono-code text-sm text-[#cfc2d6] mt-1">
+              PLEASE SIGN IN TO DROP FILES TO BOXEDLINKS.
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="animate-fade-in-up" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Drop zone */}
-      <label
-        htmlFor="file-input"
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.75rem',
-          borderRadius: '16px',
-          border: `2px dashed ${isDragging ? '#6366f1' : selectedFile ? '#22c55e' : 'rgba(255,255,255,0.12)'}`,
-          background: isDragging
-            ? 'rgba(99,102,241,0.08)'
-            : selectedFile
-            ? 'rgba(34,197,94,0.06)'
-            : 'rgba(255,255,255,0.02)',
-          padding: '2.5rem 1.5rem',
-          cursor: 'pointer',
-          transition: 'all 0.25s ease',
-          boxShadow: isDragging ? '0 0 30px rgba(99,102,241,0.15)' : 'none',
-        }}
-      >
-        <input
-          id="file-input"
-          type="file"
-          accept=".txt"
-          onChange={onInputChange}
-          style={{ display: 'none' }}
-        />
-        {selectedFile ? (
-          <>
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                background: 'rgba(34,197,94,0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <FileText size={26} color="#22c55e" />
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontWeight: 600, color: '#f4f4f5', fontSize: '0.95rem' }}>{selectedFile.name}</p>
-              <p style={{ color: '#71717a', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                {(selectedFile.size / 1024).toFixed(1)} KB — click or drag to replace
-              </p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                background: 'rgba(99,102,241,0.12)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.2s ease',
-                transform: isDragging ? 'scale(1.1)' : 'scale(1)',
-              }}
-            >
-              <Upload size={26} color="#818cf8" />
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontWeight: 600, color: '#f4f4f5', fontSize: '0.95rem' }}>
-                {isDragging ? 'Drop it!' : 'Drag & drop or click to select'}
-              </p>
-              <p style={{ color: '#71717a', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                Only .txt files · Max 5 MB
-              </p>
-            </div>
-          </>
-        )}
-      </label>
-
-      {/* Error */}
-      {error && (
-        <div
-          className="animate-fade-in"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.625rem 0.875rem',
-            borderRadius: '10px',
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.25)',
-            color: '#f87171',
-            fontSize: '0.875rem',
-          }}
-        >
-          <AlertCircle size={16} />
-          {error}
-          <button
-            onClick={() => setError(null)}
-            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#f87171' }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Upload button */}
-      {selectedFile && (
+    <div className="bg-[#171f33] border-2 border-[#ddb7ff] shadow-[8px_8px_0px_0px_rgba(221,183,255,0.3)] flex flex-col">
+      {/* Window Title Bar */}
+      <div className="bg-[#222a3d] border-b-2 border-[#ddb7ff] px-4 py-2 flex items-center justify-between font-headline text-xs text-[#ddb7ff]">
+        <span className="flex items-center gap-2 tracking-wider">
+          <span className="material-symbols-outlined text-sm">terminal</span>
+          UPLOAD_TERMINAL.EXE
+        </span>
         <button
-          id="upload-btn"
-          className="btn-primary animate-fade-in"
-          onClick={handleUpload}
-          disabled={uploading}
-          style={{ justifyContent: 'center', padding: '0.75rem' }}
+          onClick={() => setSelectedFile(null)}
+          className="hover:text-white transition-colors text-[#ddb7ff] font-mono-code"
         >
-          {uploading ? (
-            <>
-              <svg
-                className="animate-spin-slow"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-              </svg>
-              Uploading…
-            </>
-          ) : (
-            <>
-              <Upload size={16} />
-              Upload &amp; Copy Link
-            </>
-          )}
+          ✕
         </button>
-      )}
+      </div>
+
+      {/* Terminal Content Area */}
+      <div className="p-6 flex flex-col gap-4 bg-[#0d162b]">
+        <label
+          htmlFor="retro-file-input"
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          className={`border-2 border-dashed p-10 flex flex-col items-center justify-center cursor-pointer transition-all duration-150 relative ${
+            isDragging
+              ? 'border-[#4cd7f6] bg-[#4cd7f6]/10 text-[#4cd7f6]'
+              : selectedFile
+              ? 'border-[#ddb7ff] bg-[#ddb7ff]/10 text-[#ddb7ff]'
+              : 'border-[#ddb7ff]/60 bg-[#131b2e] hover:border-[#ddb7ff] text-[#ddb7ff]'
+          }`}
+        >
+          <input
+            id="retro-file-input"
+            type="file"
+            accept=".txt"
+            onChange={onInputChange}
+            className="hidden"
+          />
+
+          <span
+            className="material-symbols-outlined text-6xl mb-3"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            {selectedFile ? 'draft' : 'upload_file'}
+          </span>
+
+          <span className="font-headline font-bold text-lg md:text-xl tracking-wider text-center uppercase">
+            {selectedFile ? selectedFile.name : 'DRAG FILES HERE TO DROP'}
+          </span>
+
+          <span className="font-mono-code text-xs text-[#cfc2d6]/70 mt-2 uppercase tracking-wide">
+            {selectedFile
+              ? `${(selectedFile.size / 1024).toFixed(1)} KB — CLICK TO REPLACE`
+              : 'or click to browse (.txt files only, max 5MB)'}
+          </span>
+        </label>
+
+        {error && (
+          <div className="border-2 border-[#ffb4ab] bg-[#690005]/40 text-[#ffb4ab] p-3 font-mono-code text-xs flex items-center justify-between">
+            <span>⚠ ERROR: {error}</span>
+            <button onClick={() => setError(null)}>✕</button>
+          </div>
+        )}
+
+        {selectedFile && (
+          <button
+            onClick={handleUpload}
+            disabled={uploading}
+            className="retro-button retro-btn-cyan py-3 px-6 text-sm flex items-center justify-center gap-2 w-full mt-2"
+          >
+            {uploading ? (
+              <>
+                <span className="material-symbols-outlined animate-spin text-base">sync</span>
+                TRANSMITTING BYTES...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  send
+                </span>
+                TRANSMIT DROP & COPY LINK
+              </>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

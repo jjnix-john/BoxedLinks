@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Zap, LogOut, User as UserIcon, Files, ChevronDown, Shield } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
 import { supabase, BUCKET, getPublicUrl } from './lib/supabase'
@@ -8,371 +7,17 @@ import UploadZone from './components/UploadZone'
 import FileDashboard, { type FileRecord } from './components/FileDashboard'
 import FileViewer from './components/FileViewer'
 
-// ────────────────────────────────────────────────────────────
-// Simple client-side router: if path is /view, show FileViewer
-// ────────────────────────────────────────────────────────────
 function isViewRoute() {
   return window.location.pathname === '/view'
 }
 
-// ────────────────────────────────────────────────────────────
-// Header
-// ────────────────────────────────────────────────────────────
-interface HeaderProps {
-  user: User | null
-  onSignIn: () => void
-  onSignOut: () => void
-}
-
-function Header({ user, onSignIn, onSignOut }: HeaderProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(9,9,11,0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: '0 auto',
-          padding: '0 1.5rem',
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Logo */}
-        <a
-          href="/"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', textDecoration: 'none' }}
-        >
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '9px',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
-            }}
-          >
-            <Zap size={18} color="white" fill="white" />
-          </div>
-          <span
-            style={{
-              fontWeight: 800,
-              fontSize: '1.125rem',
-              background: 'linear-gradient(135deg, #818cf8 0%, #c084fc 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            BoxedLinks
-          </span>
-        </a>
-
-        {/* Right side */}
-        {user ? (
-          <div style={{ position: 'relative' }}>
-            <button
-              id="user-menu-btn"
-              onClick={() => setMenuOpen(!menuOpen)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: '10px',
-                padding: '0.4rem 0.75rem',
-                cursor: 'pointer',
-                color: '#d4d4d8',
-                fontFamily: 'Inter, sans-serif',
-                fontSize: '0.85rem',
-                fontWeight: 500,
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <div
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <UserIcon size={13} color="white" />
-              </div>
-              <span
-                style={{
-                  maxWidth: 160,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'none',
-                }}
-                className="sm:block"
-              >
-                {user.email}
-              </span>
-              <ChevronDown
-                size={14}
-                style={{
-                  transition: 'transform 0.2s ease',
-                  transform: menuOpen ? 'rotate(180deg)' : 'none',
-                }}
-              />
-            </button>
-
-            {menuOpen && (
-              <>
-                <div
-                  style={{ position: 'fixed', inset: 0, zIndex: 20 }}
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div
-                  className="glass animate-fade-in"
-                  style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 'calc(100% + 8px)',
-                    width: 220,
-                    borderRadius: '12px',
-                    padding: '0.5rem',
-                    zIndex: 30,
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.625rem 0.75rem',
-                      borderBottom: '1px solid rgba(255,255,255,0.06)',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
-                    <p style={{ fontSize: '0.7rem', color: '#52525b', marginBottom: '0.15rem' }}>Signed in as</p>
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#f4f4f5',
-                        fontWeight: 500,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {user.email}
-                    </p>
-                  </div>
-                  <button
-                    id="sign-out-btn"
-                    onClick={() => {
-                      setMenuOpen(false)
-                      onSignOut()
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      width: '100%',
-                      padding: '0.5rem 0.75rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      color: '#f87171',
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      transition: 'background 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.1)'
-                    }}
-                    onMouseLeave={(e) => {
-                      ;(e.currentTarget as HTMLButtonElement).style.background = 'none'
-                    }}
-                  >
-                    <LogOut size={15} />
-                    Sign Out
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          <button
-            id="sign-in-header-btn"
-            className="btn-primary"
-            onClick={onSignIn}
-          >
-            Sign In
-          </button>
-        )}
-      </div>
-    </header>
-  )
-}
-
-// ────────────────────────────────────────────────────────────
-// Hero section (logged out)
-// ────────────────────────────────────────────────────────────
-function Hero({ onSignIn }: { onSignIn: () => void }) {
-  return (
-    <section style={{ textAlign: 'center', padding: '5rem 1.5rem 3rem' }}>
-      <div
-        className="animate-fade-in-up"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.375rem 0.875rem',
-          borderRadius: '99px',
-          background: 'rgba(99,102,241,0.1)',
-          border: '1px solid rgba(99,102,241,0.2)',
-          color: '#818cf8',
-          fontSize: '0.8rem',
-          fontWeight: 500,
-          marginBottom: '1.5rem',
-        }}
-      >
-        <Shield size={13} />
-        Free · Instant · No account needed to view
-      </div>
-
-      <h1
-        className="animate-fade-in-up"
-        style={{
-          fontWeight: 800,
-          fontSize: 'clamp(2rem, 6vw, 3.5rem)',
-          lineHeight: 1.15,
-          letterSpacing: '-0.04em',
-          marginBottom: '1rem',
-          animationDelay: '0.05s',
-        }}
-      >
-        Share{' '}
-        <span
-          style={{
-            background: 'linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
-          plain text
-        </span>
-        <br />
-        in one click.
-      </h1>
-
-      <p
-        className="animate-fade-in-up"
-        style={{
-          color: '#71717a',
-          fontSize: 'clamp(0.95rem, 2.5vw, 1.125rem)',
-          maxWidth: 480,
-          margin: '0 auto 2rem',
-          lineHeight: 1.65,
-          animationDelay: '0.1s',
-        }}
-      >
-        Upload a <code style={{ color: '#818cf8', fontFamily: 'monospace' }}>.txt</code> file and get a shareable
-        link instantly. No sign-up needed to view — just paste and go.
-      </p>
-
-      <div
-        className="animate-fade-in-up"
-        style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap', animationDelay: '0.15s' }}
-      >
-        <button id="hero-signin-btn" className="btn-primary" onClick={onSignIn} style={{ fontSize: '0.95rem', padding: '0.75rem 1.5rem' }}>
-          <Zap size={17} />
-          Start Uploading Free
-        </button>
-        <a
-          href="#how-it-works"
-          className="btn-ghost"
-          style={{ fontSize: '0.95rem', padding: '0.75rem 1.5rem', textDecoration: 'none' }}
-        >
-          How it works
-        </a>
-      </div>
-    </section>
-  )
-}
-
-// ────────────────────────────────────────────────────────────
-// How it works strip
-// ────────────────────────────────────────────────────────────
-function HowItWorks() {
-  const steps = [
-    { emoji: '🔐', title: 'Sign In', desc: 'Create a free account or use magic link.' },
-    { emoji: '📄', title: 'Upload .txt', desc: 'Drag & drop any plain-text file.' },
-    { emoji: '🔗', title: 'Get a Link', desc: 'Share the link — no login needed to view.' },
-  ]
-
-  return (
-    <section
-      id="how-it-works"
-      style={{ padding: '2rem 1.5rem 4rem', maxWidth: 900, margin: '0 auto' }}
-    >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem',
-        }}
-      >
-        {steps.map((s, i) => (
-          <div
-            key={s.title}
-            className="glass animate-fade-in-up"
-            style={{
-              borderRadius: '16px',
-              padding: '1.5rem',
-              textAlign: 'center',
-              animationDelay: `${i * 0.08}s`,
-            }}
-          >
-            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{s.emoji}</div>
-            <h3 style={{ fontWeight: 700, fontSize: '1rem', color: '#f4f4f5', marginBottom: '0.375rem' }}>
-              {s.title}
-            </h3>
-            <p style={{ color: '#71717a', fontSize: '0.875rem', lineHeight: 1.55 }}>{s.desc}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-// ────────────────────────────────────────────────────────────
-// Main App
-// ────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [showAuth, setShowAuth] = useState(false)
   const [files, setFiles] = useState<FileRecord[]>([])
   const [loadingFiles, setLoadingFiles] = useState(false)
 
-  // ── Auth listener ──
+  // ── Auth Listener ──
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -387,7 +32,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ── Fetch user files ──
+  // ── Fetch Files ──
   const fetchFiles = useCallback(async (uid: string) => {
     setLoadingFiles(true)
     try {
@@ -408,7 +53,7 @@ export default function App() {
       })
       setFiles(records)
     } catch {
-      toast.error('Could not load your files.')
+      toast.error('COULD NOT FETCH DROPS FROM CLOUD.')
     } finally {
       setLoadingFiles(false)
     }
@@ -424,7 +69,7 @@ export default function App() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    toast.success('Signed out.')
+    toast.success('SIGNED OUT')
   }
 
   const handleUploadSuccess = (file: FileRecord) => {
@@ -435,112 +80,233 @@ export default function App() {
     setFiles((prev) => prev.filter((f) => f.path !== path))
   }
 
-  // ── File viewer route ──
+  // Calculate total used bytes
+  const totalUsedBytes = files.reduce((sum, f) => sum + f.size, 0)
+  const usedMB = (totalUsedBytes / (1024 * 1024)).toFixed(1)
+  const maxMB = 512
+  const progressPercent = Math.min(100, (totalUsedBytes / (maxMB * 1024 * 1024)) * 100)
+
+  // ── View Route ──
   if (isViewRoute()) {
     return <FileViewer />
   }
 
-  // ── Main app ──
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header user={user} onSignIn={() => setShowAuth(true)} onSignOut={handleSignOut} />
+    <div className="bg-[#0b1326] text-[#dae2fd] min-h-screen flex flex-col relative font-body-md overflow-x-hidden">
+      {/* Retro Scanline Overlay */}
+      <div className="scanlines"></div>
 
-      {/* Auth modal */}
+      {/* Top Nav Bar */}
+      <nav className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] border-b-2 border-[#ddb7ff] shadow-[4px_4px_0px_0px_rgba(221,183,255,0.3)]">
+        <a href="/" className="flex items-center gap-3 text-[#ddb7ff] font-headline text-lg md:text-xl font-bold uppercase tracking-wider">
+          <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+            cloud
+          </span>
+          BoxedLinks
+        </a>
+
+        <div className="hidden md:flex items-center gap-6 font-mono-code text-xs uppercase tracking-wider">
+          <a href="#how-it-works" className="text-[#ddb7ff] border-b-2 border-[#ddb7ff] pb-0.5">
+            How it Works
+          </a>
+          <a href={user ? "#dashboard" : "#"} onClick={() => !user && setShowAuth(true)} className="text-[#cfc2d6] hover:text-[#ddb7ff] transition-colors">
+            My Drops
+          </a>
+          <button onClick={() => !user && setShowAuth(true)} className="text-[#cfc2d6] hover:text-[#ddb7ff] transition-colors">
+            Profile
+          </button>
+        </div>
+
+        {user ? (
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-block font-mono-code text-xs text-[#ddb7ff] truncate max-w-[150px]">
+              {user.email}
+            </span>
+            <button
+              onClick={handleSignOut}
+              className="retro-button retro-btn-danger px-3 py-1.5 font-headline text-xs flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-sm">logout</span>
+              EXIT
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuth(true)}
+            className="retro-button retro-btn-primary px-4 py-2 font-headline text-xs flex items-center gap-1.5"
+          >
+            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
+              rocket_launch
+            </span>
+            START DROPPING
+          </button>
+        )}
+      </nav>
+
+      {/* Auth Modal */}
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
-      <main style={{ flex: 1 }}>
-        {/* Hero (logged out) */}
-        {!user && (
+      {/* Main Content Area */}
+      <main className="flex-grow pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full flex flex-col gap-12 relative z-10 pb-20">
+        {!user ? (
+          /* LOGGED OUT HERO LANDING */
           <>
-            <Hero onSignIn={() => setShowAuth(true)} />
-            <HowItWorks />
-          </>
-        )}
-
-        {/* Dashboard (logged in) */}
-        {user && (
-          <div style={{ maxWidth: 780, margin: '0 auto', padding: '2.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {/* Welcome banner */}
-            <div className="animate-fade-in-up">
-              <h2
-                style={{
-                  fontWeight: 800,
-                  fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-                  letterSpacing: '-0.03em',
-                  color: '#f4f4f5',
-                  marginBottom: '0.25rem',
-                }}
-              >
-                Upload a File
-              </h2>
-              <p style={{ color: '#71717a', fontSize: '0.9rem' }}>
-                Drop a <code style={{ color: '#818cf8' }}>.txt</code> file below — a shareable link is copied automatically.
-              </p>
-            </div>
-
-            {/* Upload zone */}
-            <UploadZone user={user} onUploadSuccess={handleUploadSuccess} />
-
-            {/* File list */}
-            <div>
+            <section className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-8 mt-6">
+              {/* Massive Retro Floppy/Cloud Icon Composition */}
               <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.625rem',
-                  marginBottom: '1rem',
-                }}
+                onClick={() => setShowAuth(true)}
+                className="relative group cursor-pointer"
               >
-                <Files size={18} color="#818cf8" />
-                <h3
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    color: '#f4f4f5',
-                  }}
-                >
-                  Your Files
-                </h3>
-                {files.length > 0 && (
+                <div className="w-48 h-48 md:w-64 md:h-64 border-4 border-[#ddb7ff] bg-[#222a3d] flex items-center justify-center shadow-[16px_16px_0px_0px_rgba(221,183,255,0.4)] retro-button transition-transform duration-200 group-hover:-translate-y-2 group-hover:-translate-x-2 group-hover:shadow-[24px_24px_0px_0px_rgba(221,183,255,0.6)]">
                   <span
-                    style={{
-                      background: 'rgba(99,102,241,0.15)',
-                      color: '#818cf8',
-                      fontWeight: 600,
-                      fontSize: '0.75rem',
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '99px',
-                    }}
+                    className="material-symbols-outlined text-[100px] md:text-[140px] text-[#ddb7ff]"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
                   >
-                    {files.length}
+                    cloud_upload
                   </span>
-                )}
+
+                  {/* Floppy overlay */}
+                  <div className="absolute bottom-4 right-4 bg-[#4cd7f6] border-2 border-[#003640] px-2 py-1 shadow-[4px_4px_0px_0px_rgba(0,54,64,1)] animate-bounce">
+                    <span
+                      className="material-symbols-outlined text-[#003640] text-xl"
+                      style={{ fontVariationSettings: "'FILL' 1" }}
+                    >
+                      save
+                    </span>
+                  </div>
+                </div>
               </div>
 
+              <div className="flex flex-col gap-4 max-w-3xl">
+                <h1 className="font-headline text-3xl md:text-5xl font-bold text-[#ddb7ff] drop-shadow-[4px_4px_0px_rgba(104,47,118,0.8)] tracking-tight leading-tight uppercase">
+                  DROP YOUR BYTES INTO THE CLOUD.
+                </h1>
+                <p className="font-body-lg text-base md:text-lg text-[#cfc2d6] max-w-2xl mx-auto leading-relaxed">
+                  The most nostalgic way to share files. Secure, fast, and 100% retro. Experience the web like it's 1999, but with the speeds of today.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAuth(true)}
+                className="retro-button border-4 border-[#4cd7f6] bg-[#0b1326] text-[#4cd7f6] px-8 md:px-12 py-4 font-headline text-lg md:text-2xl shadow-[8px_8px_0px_0px_rgba(76,215,246,0.6)] hover:bg-[#4cd7f6] hover:text-[#003640] uppercase tracking-widest flex items-center gap-3 mt-2"
+              >
+                <span className="material-symbols-outlined text-2xl md:text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  rocket_launch
+                </span>
+                GET STARTED
+              </button>
+            </section>
+
+            {/* Community Drops / How it works section */}
+            <section id="how-it-works" className="mt-8 bg-[#171f33] border-2 border-[#4d4354] p-6 shadow-[8px_8px_0px_0px_rgba(45,52,73,1)]">
+              <div className="flex items-center justify-between border-b-2 border-[#4d4354] pb-4 mb-6">
+                <h2 className="font-headline text-xl text-[#4cd7f6] font-bold uppercase flex items-center gap-3">
+                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    public
+                  </span>
+                  Recent Drops
+                </h2>
+                <div className="font-mono-code text-xs text-[#cfc2d6] px-3 py-1 border-2 border-[#4d4354] bg-[#222a3d]">
+                  LIVE FEED _
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {[
+                  { name: 'sunset.png', size: '2.4MB', ext: 'PNG', color: 'border-[#f3aeff] text-[#f3aeff] hover:bg-[#f3aeff]' },
+                  { name: 'readme.txt', size: '12KB', ext: 'TXT', color: 'border-[#4cd7f6] text-[#4cd7f6] hover:bg-[#4cd7f6]' },
+                  { name: 'mixtape.zip', size: '145MB', ext: 'ZIP', color: 'border-[#ddb7ff] text-[#ddb7ff] hover:bg-[#ddb7ff]' },
+                  { name: 'track_01.mp3', size: '4.2MB', ext: 'MP3', color: 'border-[#b979c6] text-[#b979c6] hover:bg-[#b979c6]' },
+                  { name: 'index.html', size: '8KB', ext: 'HTML', color: 'border-[#4cd7f6] text-[#4cd7f6] hover:bg-[#4cd7f6]' },
+                  { name: 'dancing_baby.gif', size: '1.1MB', ext: 'GIF', color: 'border-[#ddb7ff] text-[#ddb7ff] hover:bg-[#ddb7ff]' },
+                ].map((chip) => (
+                  <div
+                    key={chip.name}
+                    onClick={() => setShowAuth(true)}
+                    className={`retro-button bg-[#0b1326] border-2 ${chip.color.split(' ')[0]} p-4 flex flex-col items-center gap-2 shadow-[4px_4px_0px_0px_rgba(221,183,255,0.2)] group cursor-pointer`}
+                  >
+                    <span className={`material-symbols-outlined text-4xl ${chip.color.split(' ')[1]} group-hover:text-[#0b1326]`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                      description
+                    </span>
+                    <span className="font-mono-code text-xs text-[#dae2fd] group-hover:text-[#0b1326] truncate w-full text-center">
+                      {chip.name}
+                    </span>
+                    <div className="bg-[#171f33] text-[#cfc2d6] font-mono-code text-[10px] px-2 py-0.5 w-full text-center mt-1 border border-[#4d4354]">
+                      {chip.size}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        ) : (
+          /* LOGGED IN DASHBOARD VIEW (MATCHING USER SCREENSHOT 1) */
+          <div id="dashboard" className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Main Terminal Column (Upload + Drops Table) */}
+            <div className="lg:col-span-8 flex flex-col gap-8">
+              {/* Upload Terminal */}
+              <UploadZone user={user} onUploadSuccess={handleUploadSuccess} />
+
+              {/* My Drops Table */}
               {loadingFiles ? (
-                <div
-                  className="glass animate-pulse"
-                  style={{ borderRadius: '16px', height: 100 }}
-                />
+                <div className="bg-[#171f33] border-2 border-[#ddb7ff] p-8 text-center font-headline text-xs text-[#ddb7ff]">
+                  LOADING DROPS...
+                </div>
               ) : (
                 <FileDashboard files={files} onDelete={handleDelete} />
               )}
+            </div>
+
+            {/* Right Side Panel: Storage Status */}
+            <div className="lg:col-span-4 flex flex-col gap-6">
+              <div className="bg-[#171f33] border-2 border-[#ddb7ff]/60 p-6 shadow-[6px_6px_0px_0px_rgba(221,183,255,0.3)]">
+                <div className="font-headline font-bold text-xs text-[#ddb7ff] uppercase tracking-wider mb-6 border-b border-[#4d4354] pb-2">
+                  STORAGE STATUS
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-mono-code text-xs text-[#cfc2d6]/70 uppercase">USED</span>
+                    <span className="font-headline text-3xl font-bold text-[#f3aeff]">
+                      {usedMB}MB
+                    </span>
+                  </div>
+
+                  <div className="text-right font-mono-code text-xs text-[#cfc2d6]/70 border-b border-[#4d4354] pb-4">
+                    / {maxMB}MB TOTAL
+                  </div>
+
+                  {/* Retro Progress Bar Container */}
+                  <div className="w-full bg-[#0b1326] border-2 border-[#4d4354] h-6 p-0.5 relative">
+                    <div
+                      className="bg-gradient-to-r from-[#842bd2] via-[#b76dff] to-[#f3aeff] h-full transition-all duration-300"
+                      style={{ width: `${Math.max(5, progressPercent)}%` }}
+                    ></div>
+                  </div>
+
+                  <button
+                    onClick={() => toast.success('STORAGE EXPANSION PROTOCOL REQUESTED')}
+                    className="retro-button retro-btn-cyan text-xs py-3 mt-4 text-center font-bold"
+                  >
+                    UPGRADE STORAGE
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer
-        style={{
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          padding: '1.25rem 1.5rem',
-          textAlign: 'center',
-          color: '#3f3f46',
-          fontSize: '0.8rem',
-        }}
-      >
-        BoxedLinks &mdash; Built with React &amp; Supabase
+      {/* Retro Footer */}
+      <footer className="w-full py-8 px-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-[#171f33] border-t-2 border-[#4d4354] z-10 relative mt-auto font-mono-code text-xs">
+        <div className="text-[#4cd7f6]">
+          © 199X BOXEDLINKS V1.0.4 - ALL BYTES RESERVED
+        </div>
+        <div className="flex items-center gap-6">
+          <a href="#" className="text-[#cfc2d6] hover:text-[#4cd7f6] transition-colors">Credits</a>
+          <a href="#" className="text-[#cfc2d6] hover:text-[#4cd7f6] transition-colors">Terms</a>
+          <a href="#" className="text-[#cfc2d6] hover:text-[#4cd7f6] transition-colors">Support</a>
+        </div>
       </footer>
     </div>
   )
