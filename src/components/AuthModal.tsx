@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 
 interface AuthModalProps { onClose: () => void }
-type Mode = 'signin' | 'signup' | 'magic'
+type Mode = 'signin' | 'signup'
 
 export default function AuthModal({ onClose }: AuthModalProps) {
   const [mode, setMode] = useState<Mode>('signin')
@@ -16,12 +16,6 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     e.preventDefault()
     setLoading(true)
     try {
-      if (mode === 'magic') {
-        const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } })
-        if (error) throw error
-        toast.success('MAGIC LINK SENT! CHECK INBOX.')
-        onClose(); return
-      }
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
@@ -56,19 +50,19 @@ export default function AuthModal({ onClose }: AuthModalProps) {
               <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>cloud</span>
             </div>
             <h2 className="font-headline-md text-headline-md font-bold text-primary uppercase tracking-wider">
-              {mode === 'signup' ? 'CREATE ACCOUNT' : mode === 'magic' ? 'MAGIC LINK' : 'WELCOME BACK'}
+              {mode === 'signup' ? 'CREATE ACCOUNT' : 'WELCOME BACK'}
             </h2>
             <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-              {mode === 'magic' ? 'TRANSMIT ONE-TIME ACCESS LINK' : 'ACCESS FILE DROP SYSTEM'}
+              ACCESS FILE DROP SYSTEM
             </p>
           </div>
 
           {/* Mode tabs */}
-          <div className="grid grid-cols-3 gap-1 bg-surface p-1 border border-outline-variant">
-            {(['signin', 'signup', 'magic'] as Mode[]).map((m) => (
+          <div className="grid grid-cols-2 gap-1 bg-surface p-1 border border-outline-variant">
+            {(['signin', 'signup'] as Mode[]).map((m) => (
               <button key={m} type="button" onClick={() => setMode(m)}
                 className={`py-2 font-label-sm text-label-sm uppercase tracking-wider transition-colors ${mode === m ? 'bg-primary text-on-primary font-bold' : 'text-on-surface-variant hover:text-primary'}`}>
-                {m === 'signin' ? 'SIGN IN' : m === 'signup' ? 'SIGN UP' : '✨ MAGIC'}
+                {m === 'signin' ? 'SIGN IN' : 'SIGN UP'}
               </button>
             ))}
           </div>
@@ -79,24 +73,22 @@ export default function AuthModal({ onClose }: AuthModalProps) {
               <label className="block text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase">USER EMAIL:</label>
               <input type="email" required placeholder="operator@boxedlinks.net" value={email} onChange={(e) => setEmail(e.target.value)} className="retro-input" />
             </div>
-            {mode !== 'magic' && (
-              <div>
-                <label className="block text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase">PASSWORD:</label>
-                <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} required minLength={6} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="retro-input pr-10" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary">
-                    <span className="material-symbols-outlined text-base">{showPw ? 'visibility_off' : 'visibility'}</span>
-                  </button>
-                </div>
+            <div>
+              <label className="block text-on-surface-variant font-label-sm text-label-sm mb-1 uppercase">PASSWORD:</label>
+              <div className="relative">
+                <input type={showPw ? 'text' : 'password'} required minLength={6} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="retro-input pr-10" />
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary">
+                  <span className="material-symbols-outlined text-base">{showPw ? 'visibility_off' : 'visibility'}</span>
+                </button>
               </div>
-            )}
+            </div>
             <button type="submit" disabled={loading}
               className="retro-button border-2 border-primary bg-surface text-primary hover:bg-primary hover:text-on-primary shadow-[4px_4px_0px_0px_rgba(221,183,255,1)] py-3 font-label-md text-label-md flex items-center justify-center gap-2 mt-2 w-full uppercase">
               {loading ? (
                 <><span className="material-symbols-outlined animate-spin text-base">sync</span>AUTHENTICATING...</>
               ) : (
                 <><span className="material-symbols-outlined text-base">login</span>
-                {mode === 'magic' ? 'SEND MAGIC LINK' : mode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN'}</>
+                {mode === 'signup' ? 'CREATE ACCOUNT' : 'SIGN IN'}</>
               )}
             </button>
           </form>

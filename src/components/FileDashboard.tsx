@@ -1,22 +1,39 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { supabase, BUCKET } from '../lib/supabase'
+import { createShortLink } from '../lib/shortLinks'
 
 export interface FileRecord {
   name: string; path: string; publicUrl: string; size: number; createdAt: string
 }
-interface FileDashboardProps { files: FileRecord[]; onDelete: (path: string) => void }
+
+interface FileDashboardProps { 
+  files: FileRecord[]
+  onDelete: (path: string) => void 
+}
+
+type FileTypeFilter = 'all' | 'img' | 'pdf' | 'txt' | 'doc'
+
+function getExt(name: string) { return name.split('.').pop()?.toLowerCase() ?? '' }
+
+function getFileType(name: string): FileTypeFilter {
+  const ext = getExt(name)
+  if (['png','jpg','jpeg','gif','webp','bmp','svg','ico'].includes(ext)) return 'img'
+  if (ext === 'pdf') return 'pdf'
+  if (ext === 'txt') return 'txt'
+  if (['doc','docx','odt'].includes(ext)) return 'doc'
+  return 'all'
+}
 
 function formatBytes(b: number) {
   if (b < 1024) return `${b} B`
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
   return `${(b / (1024 * 1024)).toFixed(1)} MB`
 }
+
 function formatDate(iso: string) {
   try { return new Date(iso).toISOString().split('T')[0] } catch { return iso }
 }
-
-function getExt(name: string) { return name.split('.').pop()?.toLowerCase() ?? '' }
 
 function ExtBadge({ name }: { name: string }) {
   const ext = getExt(name)
@@ -57,11 +74,22 @@ function fileIcon(name: string) {
 
 export default function FileDashboard({ files, onDelete }: FileDashboardProps) {
   const [deletingPath, setDeletingPath] = useState<string | null>(null)
+  const [filterType, setFilterType] = useState<FileTypeFilter>('all')
 
-  const copyLink = (path: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/view?path=${encodeURIComponent(path)}`)
-    toast.success('DROP LINK COPIED!')
+  const filteredFiles = filterType === 'all' 
+    ? files 
+    : files.filter(f => getFileType(f.name) === filterType)
+
+  const copyLink = async (path: string) => {
+    try {
+      const shortLink = await createShortLink(path)
+      navigator.clipboard.writeText(shortLink)
+      toast.success('DROP LINK COPIED!')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'FAILED TO GENERATE LINK')
+    }
   }
+
   const handleDelete = async (path: string) => {
     if (!confirm('CONFIRM DELETE: THIS BYTE STREAM CANNOT BE RECOVERED.')) return
     setDeletingPath(path)
@@ -74,6 +102,14 @@ export default function FileDashboard({ files, onDelete }: FileDashboardProps) {
     } finally { setDeletingPath(null) }
   }
 
+  const filterButtons: Array<{ type: FileTypeFilter; label: string; icon: string }> = [
+    { type: 'all', label: 'ALL', icon: 'inventory_2' },
+    { type: 'img', label: 'IMG', icon: 'image' },
+    { type: 'pdf', label: 'PDF', icon: 'picture_as_pdf' },
+    { type: 'txt', label: 'TXT', icon: 'description' },
+    { type: 'doc', label: 'DOC', icon: 'draft' },
+  ]
+
   return (
     <div className="bg-surface-container border-2 border-outline-variant shadow-[6px_6px_0px_0px_rgba(45,52,73,1)]">
       <div className="bg-surface-container-high border-b-2 border-outline-variant px-4 py-3 flex items-center justify-between">
@@ -84,10 +120,30 @@ export default function FileDashboard({ files, onDelete }: FileDashboardProps) {
         <span className="font-label-sm text-label-sm text-on-surface-variant/60">TOTAL: {files.length}</span>
       </div>
 
-      {files.length === 0 ? (
+      {/* Filter buttons */}
+      <div className="bg-surface-container-high border-b border-outline-variant/40 px-4 py-2 flex gap-1 flex-wrap">
+        {filterButtons.map(btn => (
+          <button
+            key={btn.type}
+            onClick={() => setFilterType(btn.type)}
+            className={`retro-button border-2 text-[10px] px-2.5 py-1 font-label-sm flex items-center gap-1 transition-colors ${
+              filterType === btn.type
+                ? 'border-secondary bg-secondary text-on-secondary shadow-[2px_2px_0px_0px_var(--color-secondary)]'
+                : 'border-outline-variant bg-surface text-on-surface hover:border-secondary hover:text-secondary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-sm">{btn.icon}</span>
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
+      {filteredFiles.length === 0 ? (
         <div className="py-12 text-center flex flex-col items-center gap-3">
           <span className="material-symbols-outlined text-5xl text-outline-variant">inventory_2</span>
-          <p className="font-label-sm text-label-sm text-on-surface-variant/60 uppercase">NO TRANSMISSIONS LOGGED YET.</p>
+          <p className="font-label-sm text-label-sm text-on-surface-variant/60 uppercase">
+            {files.length === 0 ? 'NO TRANSMISSIONS LOGGED YET.' : 'NO FILES MATCH THIS FILTER.'}
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto scrollbar-retro">
@@ -101,7 +157,7 @@ export default function FileDashboard({ files, onDelete }: FileDashboardProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40">
-              {files.map((file) => (
+              {filteredFiles.map((file) => (
                 <tr key={file.path} className="hover:bg-surface-container-high transition-colors group">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2.5">

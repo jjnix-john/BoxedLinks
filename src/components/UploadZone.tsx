@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { supabase, BUCKET, getPublicUrl } from '../lib/supabase'
 import { validateFile, allowedExtensionsList, MAX_FILE_SIZE_BYTES } from '../lib/fileValidator'
+import { createShortLink } from '../lib/shortLinks'
 import type { User } from '@supabase/supabase-js'
 
 interface UploadZoneProps {
@@ -74,8 +75,8 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
       if (uploadError) throw uploadError
 
       const publicUrl = getPublicUrl(filePath)
-      const shareLink = `${window.location.origin}/view?path=${encodeURIComponent(filePath)}`
-      await navigator.clipboard.writeText(shareLink)
+      const shortLink = await createShortLink(filePath)
+      await navigator.clipboard.writeText(shortLink)
       toast.success('DROP LINK COPIED TO CLIPBOARD!')
       onUploadSuccess({ name: selectedFile.name, path: filePath, publicUrl, size: selectedFile.size, createdAt: new Date().toISOString() })
       setSelectedFile(null)

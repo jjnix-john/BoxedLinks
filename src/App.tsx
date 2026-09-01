@@ -8,7 +8,7 @@ import FileDashboard, { type FileRecord } from './components/FileDashboard'
 import FileViewer from './components/FileViewer'
 
 function isViewRoute() {
-  return window.location.pathname === '/view'
+  return window.location.pathname === '/view' || window.location.pathname.startsWith('/s/')
 }
 
 /* ── Floating ambient background icons ── */
@@ -97,7 +97,7 @@ export default function App() {
   const fetchFiles = useCallback(async (uid: string) => {
     setLoadingFiles(true)
     try {
-      const { data, error } = await supabase.storage.from(BUCKET).list(uid, { sortBy: { column: 'created_at', order: 'desc' } })
+      const { data, error } = await supabase.storage.from(BUCKET).list(`${uid}/`, { sortBy: { column: 'created_at', order: 'desc' } })
       if (error) throw error
       setFiles((data ?? []).map((obj) => {
         const filePath = `${uid}/${obj.name}`
@@ -282,11 +282,17 @@ export default function App() {
           /* ── LOGGED IN DASHBOARD ── */
           <div id="dashboard" className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-8 flex flex-col gap-8">
-              <UploadZone user={user} onUploadSuccess={handleUploadSuccess} />
+              <UploadZone 
+                user={user} 
+                onUploadSuccess={handleUploadSuccess} 
+              />
               {loadingFiles ? (
                 <div className="bg-surface-container border-2 border-primary p-8 text-center font-headline-md text-label-md text-primary">LOADING DROPS...</div>
               ) : (
-                <FileDashboard files={files} onDelete={handleDelete} />
+                <FileDashboard 
+                  files={files}
+                  onDelete={handleDelete} 
+                />
               )}
             </div>
 

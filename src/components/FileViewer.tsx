@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { getPublicUrl } from '../lib/supabase'
+import { resolveShortLink } from '../lib/shortLinks'
 
 type ContentMode = 'text' | 'image' | 'audio' | 'video' | 'binary'
 
@@ -21,7 +22,15 @@ function formatBytes(b: number) {
 
 export default function FileViewer() {
   const params = new URLSearchParams(window.location.search)
-  const filePath = params.get('path') ?? ''
+  let shortCode = params.get('s')
+  const directPath = params.get('path')
+  
+  // Extract short code from pathname if using /s/code format
+  if (!shortCode && window.location.pathname.startsWith('/s/')) {
+    shortCode = window.location.pathname.slice(3)
+  }
+  
+  let filePath = directPath ?? ''
 
   const [content, setContent] = useState<string | null>(null)
   const [fileName, setFileName] = useState('')
@@ -32,11 +41,36 @@ export default function FileViewer() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!filePath) { setError('NO TRANSMISSION PATH SPECIFIED.'); setLoading(false); return }
-    const parts = filePath.split('/')
+    // If short code is provided, resolve it first
+    if (shortCode && !filePath) {
+      resolveShortLink(shortCode)
+        .then((resolved) => {
+          if (!resolved) {
+            setError('SHORT LINK NOT FOUND.')
+            setLoading(false)
+            return
+          }
+          filePath = resolved
+          loadFile(resolved)
+        })
+        .catch(() => {
+          setError('FAILED TO RESOLVE SHORT LINK.')
+          setLoading(false)
+        })
+    } else if (filePath) {
+      loadFile(filePath)
+    } else {
+      setError('NO TRANSMISSION PATH SPECIFIED.')
+      setLoading(false)
+    }
+  }, [shortCode, directPath])
+
+  function loadFile(path: string) {
+    if (!path) return
+    const parts = path.split('/')
     const name = parts[parts.length - 1].replace(/^\d+-/, '')
     setFileName(name)
-    const url = getPublicUrl(filePath)
+    const url = getPublicUrl(path)
     setPublicUrl(url)
     const contentMode = getContentMode(name)
     setMode(contentMode)
@@ -60,7 +94,7 @@ export default function FileViewer() {
         })
         .catch((err: unknown) => { setError(err instanceof Error ? err.message : 'FAILED TO LOCATE FILE.'); setLoading(false) })
     }
-  }, [filePath])
+  }
 
   const copyLink = () => { navigator.clipboard.writeText(window.location.href); toast.success('TRANSMISSION LINK COPIED!') }
 
