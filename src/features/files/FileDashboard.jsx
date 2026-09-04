@@ -1,22 +1,11 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { supabase, BUCKET } from '../lib/supabase'
-import { createShortLink } from '../lib/shortLinks'
+import { supabase, BUCKET } from '../../lib/services/supabase'
+import { createShortLink } from '../../lib/services/shortLinks'
 
-export interface FileRecord {
-  name: string; path: string; publicUrl: string; size: number; createdAt: string
-}
+function getExt(name) { return name.split('.').pop()?.toLowerCase() ?? '' }
 
-interface FileDashboardProps { 
-  files: FileRecord[]
-  onDelete: (path: string) => void 
-}
-
-type FileTypeFilter = 'all' | 'img' | 'pdf' | 'txt' | 'doc'
-
-function getExt(name: string) { return name.split('.').pop()?.toLowerCase() ?? '' }
-
-function getFileType(name: string): FileTypeFilter {
+function getFileType(name) {
   const ext = getExt(name)
   if (['png','jpg','jpeg','gif','webp','bmp','svg','ico'].includes(ext)) return 'img'
   if (ext === 'pdf') return 'pdf'
@@ -25,17 +14,17 @@ function getFileType(name: string): FileTypeFilter {
   return 'all'
 }
 
-function formatBytes(b: number) {
+function formatBytes(b) {
   if (b < 1024) return `${b} B`
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
   return `${(b / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function formatDate(iso: string) {
+function formatDate(iso) {
   try { return new Date(iso).toISOString().split('T')[0] } catch { return iso }
 }
 
-function ExtBadge({ name }: { name: string }) {
+function ExtBadge({ name }) {
   const ext = getExt(name)
   const isImage = ['png','jpg','jpeg','gif','webp','bmp','svg','ico'].includes(ext)
   const isAudio = ['mp3','wav','ogg','flac','m4a'].includes(ext)
@@ -60,7 +49,7 @@ function ExtBadge({ name }: { name: string }) {
   )
 }
 
-function fileIcon(name: string) {
+function fileIcon(name) {
   const ext = getExt(name)
   if (['png','jpg','jpeg','gif','webp','bmp','svg','ico'].includes(ext)) return 'image'
   if (['mp4','webm','ogv'].includes(ext)) return 'video_file'
@@ -72,37 +61,37 @@ function fileIcon(name: string) {
   return 'draft'
 }
 
-export default function FileDashboard({ files, onDelete }: FileDashboardProps) {
-  const [deletingPath, setDeletingPath] = useState<string | null>(null)
-  const [filterType, setFilterType] = useState<FileTypeFilter>('all')
+export default function FileDashboard({ files, onDelete }) {
+  const [deletingPath, setDeletingPath] = useState(null)
+  const [filterType, setFilterType] = useState('all')
 
   const filteredFiles = filterType === 'all' 
     ? files 
     : files.filter(f => getFileType(f.name) === filterType)
 
-  const copyLink = async (path: string) => {
+  const copyLink = async (path) => {
     try {
       const shortLink = await createShortLink(path)
       navigator.clipboard.writeText(shortLink)
       toast.success('DROP LINK COPIED!')
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error(err instanceof Error ? err.message : 'FAILED TO GENERATE LINK')
     }
   }
 
-  const handleDelete = async (path: string) => {
+  const handleDelete = async (path) => {
     if (!confirm('CONFIRM DELETE: THIS BYTE STREAM CANNOT BE RECOVERED.')) return
     setDeletingPath(path)
     try {
       const { error } = await supabase.storage.from(BUCKET).remove([path])
       if (error) throw error
       onDelete(path); toast.success('DROP DELETED')
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error(err instanceof Error ? err.message : 'DELETE FAILED')
     } finally { setDeletingPath(null) }
   }
 
-  const filterButtons: Array<{ type: FileTypeFilter; label: string; icon: string }> = [
+  const filterButtons = [
     { type: 'all', label: 'ALL', icon: 'inventory_2' },
     { type: 'img', label: 'IMG', icon: 'image' },
     { type: 'pdf', label: 'PDF', icon: 'picture_as_pdf' },

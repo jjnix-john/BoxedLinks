@@ -60,14 +60,7 @@ const BLOCKED_EXTENSIONS = new Set([
 ])
 
 /* ── Magic-byte signatures ── */
-interface MagicSig {
-  offset: number
-  bytes: number[]
-  label: string
-  safe: boolean
-}
-
-const MAGIC_SIGS: MagicSig[] = [
+const MAGIC_SIGS = [
   // ─ DANGEROUS (block) ─
   { offset: 0, bytes: [0x4D, 0x5A],                         label: 'Windows PE Executable (MZ)',        safe: false },
   { offset: 0, bytes: [0x7F, 0x45, 0x4C, 0x46],             label: 'ELF Executable',                   safe: false },
@@ -93,7 +86,7 @@ const MAGIC_SIGS: MagicSig[] = [
 ]
 
 /* ── Text-file suspicious content patterns ── */
-const TEXT_SUSPICIOUS: Array<{ pattern: string; label: string }> = [
+const TEXT_SUSPICIOUS = [
   { pattern: '<script',          label: 'EMBEDDED SCRIPT TAG' },
   { pattern: '<?php',            label: 'PHP CODE' },
   { pattern: 'powershell',       label: 'POWERSHELL COMMANDS' },
@@ -116,28 +109,28 @@ const TEXT_EXTENSIONS = new Set([
 ])
 
 /* ── Helpers ── */
-function readSlice(file: File, start: number, end: number): Promise<Uint8Array> {
+function readSlice(file, start, end) {
   return new Promise((resolve, reject) => {
     const fr = new FileReader()
-    fr.onload = (e) => resolve(new Uint8Array(e.target!.result as ArrayBuffer))
+    fr.onload = (e) => resolve(new Uint8Array(e.target.result))
     fr.onerror = () => reject(new Error('FAILED TO READ FILE'))
     fr.readAsArrayBuffer(file.slice(start, end))
   })
 }
 
-function matchesSig(buf: Uint8Array, sig: MagicSig): boolean {
+function matchesSig(buf, sig) {
   if (buf.length < sig.offset + sig.bytes.length) return false
   return sig.bytes.every((b, i) => buf[sig.offset + i] === b)
 }
 
-function nullByteRatio(buf: Uint8Array, limit: number): number {
+function nullByteRatio(buf, limit) {
   const n = Math.min(limit, buf.length)
   let zeros = 0
   for (let i = 0; i < n; i++) if (buf[i] === 0x00) zeros++
   return zeros / n
 }
 
-function containsPEHeader(buf: Uint8Array): boolean {
+function containsPEHeader(buf) {
   // Scan for MZ signature after the first two bytes (i.e. embedded payload)
   for (let i = 2; i < buf.length - 1; i++) {
     if (buf[i] === 0x4D && buf[i + 1] === 0x5A) return true
@@ -146,12 +139,7 @@ function containsPEHeader(buf: Uint8Array): boolean {
 }
 
 /* ── Public API ── */
-export interface ValidationResult {
-  valid: boolean
-  error?: string  // Hard block reason (shown as toast + inline)
-}
-
-export async function validateFile(file: File): Promise<ValidationResult> {
+export async function validateFile(file) {
   // 1 — Size
   if (file.size === 0)
     return { valid: false, error: 'EMPTY FILE REJECTED: ZERO-BYTE TRANSMISSIONS NOT ALLOWED' }
@@ -183,7 +171,7 @@ export async function validateFile(file: File): Promise<ValidationResult> {
     return { valid: false, error: 'SUSPICIOUS FILENAME: ILLEGAL CHARACTERS DETECTED — BLOCKED' }
 
   // 7 — Read first 8 KB for magic-byte and content analysis
-  let header: Uint8Array
+  let header
   try {
     header = await readSlice(file, 0, 8192)
   } catch {
@@ -222,8 +210,8 @@ export async function validateFile(file: File): Promise<ValidationResult> {
 }
 
 /* Human-readable list of allowed types for UI display */
-export function allowedExtensionsList(): string {
-  const groups: Record<string, string[]> = {
+export function allowedExtensionsList() {
+  const groups = {
     'Text': ['txt', 'md', 'csv', 'log', 'json', 'xml', 'yaml'],
     'Images': ['png', 'jpg', 'gif', 'webp', 'svg'],
     'Documents': ['pdf'],

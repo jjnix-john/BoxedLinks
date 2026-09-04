@@ -1,16 +1,9 @@
 import React, { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { supabase, BUCKET, getPublicUrl } from '../lib/supabase'
-import { validateFile, allowedExtensionsList, MAX_FILE_SIZE_BYTES } from '../lib/fileValidator'
-import { createShortLink } from '../lib/shortLinks'
-import type { User } from '@supabase/supabase-js'
-
-interface UploadZoneProps {
-  user: User | null
-  onUploadSuccess: (file: { name: string; path: string; publicUrl: string; size: number; createdAt: string }) => void
-}
-
-function extIcon(name: string): string {
+import { supabase, BUCKET, getPublicUrl } from '../../lib/services/supabase'
+import { validateFile, allowedExtensionsList, MAX_FILE_SIZE_BYTES } from '../../lib/security/fileValidator'
+import { createShortLink } from '../../lib/services/shortLinks'
+function extIcon(name) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'].includes(ext)) return 'image'
   if (['mp4', 'webm', 'ogv', 'mov'].includes(ext)) return 'video_file'
@@ -22,21 +15,21 @@ function extIcon(name: string): string {
   return 'draft'
 }
 
-function formatBytes(b: number) {
+function formatBytes(b) {
   if (b < 1024) return `${b} B`
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
   return `${(b / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
+export default function UploadZone({ user, onUploadSuccess }) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [scanning, setScanning] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [error, setError] = useState(null)
   const [showAllowed, setShowAllowed] = useState(false)
 
-  const processFile = useCallback(async (file: File) => {
+  const processFile = useCallback(async (file) => {
     setError(null)
     setSelectedFile(null)
     setScanning(true)
@@ -51,13 +44,13 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
     toast.success('FILE CLEARED — READY TO TRANSMIT')
   }, [])
 
-  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true) }
+  const onDragOver = (e) => { e.preventDefault(); setIsDragging(true) }
   const onDragLeave = () => setIsDragging(false)
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = (e) => {
     e.preventDefault(); setIsDragging(false)
     const file = e.dataTransfer.files[0]; if (file) processFile(file)
   }
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onInputChange = (e) => {
     const file = e.target.files?.[0]; if (file) processFile(file); e.target.value = ''
   }
 
@@ -80,7 +73,7 @@ export default function UploadZone({ user, onUploadSuccess }: UploadZoneProps) {
       toast.success('DROP LINK COPIED TO CLIPBOARD!')
       onUploadSuccess({ name: selectedFile.name, path: filePath, publicUrl, size: selectedFile.size, createdAt: new Date().toISOString() })
       setSelectedFile(null)
-    } catch (err: unknown) {
+    } catch (err) {
       const msg = err instanceof Error ? err.message : 'TRANSMISSION FAILED'
       setError(msg); toast.error(msg)
     } finally { setUploading(false) }

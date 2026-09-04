@@ -1,91 +1,19 @@
 import { useEffect, useState, useCallback } from 'react'
-import type { User } from '@supabase/supabase-js'
 import toast from 'react-hot-toast'
-import { supabase, BUCKET, getPublicUrl } from './lib/supabase'
-import AuthModal from './components/AuthModal'
-import UploadZone from './components/UploadZone'
-import FileDashboard, { type FileRecord } from './components/FileDashboard'
-import FileViewer from './components/FileViewer'
-
-function isViewRoute() {
-  return window.location.pathname === '/view' || window.location.pathname.startsWith('/s/')
-}
-
-/* ── Floating ambient background icons ── */
-function FloatingBg() {
-  return (
-    <div className="floating-bg" aria-hidden="true">
-      <span className="material-symbols-outlined absolute top-[15%] left-[10%] text-primary/20 text-6xl animate-float-slow" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
-      <span className="material-symbols-outlined absolute top-[40%] right-[15%] text-secondary/20 text-5xl animate-float-medium" style={{ fontVariationSettings: "'FILL' 1" }}>folder</span>
-      <span className="material-symbols-outlined absolute bottom-[20%] left-[20%] text-tertiary/20 text-7xl animate-float-delayed" style={{ fontVariationSettings: "'FILL' 1" }}>cloud</span>
-      <span className="material-symbols-outlined absolute top-[60%] left-[5%] text-secondary/15 text-4xl animate-float-fast" style={{ fontVariationSettings: "'FILL' 1" }}>mouse</span>
-      <span className="material-symbols-outlined absolute bottom-[30%] right-[10%] text-primary/15 text-5xl animate-spin-slow" style={{ fontVariationSettings: "'FILL' 1" }}>cd</span>
-      <span className="material-symbols-outlined absolute top-[25%] right-[25%] text-tertiary-container/20 text-4xl animate-float-slow" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-      <div className="absolute top-[75%] right-[40%] w-16 h-16 border-4 border-secondary/10 animate-float-medium rotate-45" />
-      <div className="absolute top-[10%] left-[40%] w-12 h-12 border-4 border-primary/10 rounded-full animate-float-delayed" />
-    </div>
-  )
-}
-
-/* ── Reusable retro info modal ── */
-function InfoModal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="w-full max-w-md bg-surface-container border-2 border-secondary shadow-[10px_10px_0px_0px_var(--color-secondary)]" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-surface-container-high border-b-2 border-secondary px-4 py-2 flex items-center justify-between font-label-md text-label-sm text-secondary">
-          <span>{title}</span>
-          <button onClick={onClose} className="retro-button w-5 h-5 bg-secondary text-on-secondary flex items-center justify-center font-bold text-xs hover:bg-primary hover:text-on-primary transition-colors">✕</button>
-        </div>
-        <div className="p-6 font-label-sm text-label-sm text-on-surface-variant leading-relaxed">{children}</div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Profile panel modal ── */
-function ProfilePanel({ user, onSignOut, onClose }: { user: User; onSignOut: () => void; onClose: () => void }) {
-  const joined = new Date(user.created_at ?? '').toLocaleDateString()
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="w-full max-w-sm bg-surface-container border-2 border-primary shadow-[10px_10px_0px_0px_var(--color-primary)]" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-surface-container-high border-b-2 border-primary px-4 py-2 flex items-center justify-between font-label-sm text-label-sm text-primary">
-          <span className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-            OPERATOR_PROFILE.DAT
-          </span>
-          <button onClick={onClose} className="retro-button w-5 h-5 bg-primary text-on-primary flex items-center justify-center font-bold text-xs hover:bg-secondary hover:text-on-secondary transition-colors">✕</button>
-        </div>
-        <div className="p-6 flex flex-col gap-5">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-primary-container/20 border-2 border-primary flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-            </div>
-            <div>
-              <div className="font-headline-md text-sm text-primary font-bold uppercase">{user.email?.split('@')[0]}</div>
-              <div className="font-label-sm text-label-sm text-on-surface-variant">{user.email}</div>
-              <div className="font-label-sm text-[10px] text-on-surface-variant/50 mt-1">JOINED: {joined}</div>
-            </div>
-          </div>
-          <div className="border border-outline-variant divide-y divide-outline-variant font-label-sm text-label-sm">
-            <div className="flex justify-between px-3 py-2"><span className="text-on-surface-variant/60">USER ID</span><span className="text-primary font-bold truncate max-w-[180px]">{user.id.slice(0, 16)}…</span></div>
-            <div className="flex justify-between px-3 py-2"><span className="text-on-surface-variant/60">PROVIDER</span><span className="text-primary font-bold uppercase">{user.app_metadata?.provider ?? 'EMAIL'}</span></div>
-            <div className="flex justify-between px-3 py-2"><span className="text-on-surface-variant/60">STATUS</span><span className="text-secondary font-bold">● ONLINE</span></div>
-          </div>
-          <button onClick={() => { onSignOut(); onClose() }} className="retro-button border-2 border-error bg-surface text-error hover:bg-error hover:text-on-error shadow-[4px_4px_0px_0px_var(--color-error)] py-2.5 text-label-sm font-label-sm flex items-center justify-center gap-2 w-full">
-            <span className="material-symbols-outlined text-sm">logout</span>SIGN OUT
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+import { supabase, BUCKET, getPublicUrl } from '../lib/services/supabase'
+import UploadZone from '../features/upload/UploadZone'
+import FileDashboard from '../features/files/FileDashboard'
+import FileViewer from '../features/viewer/FileViewer'
+import AmbientBackground from '../components/layout/AmbientBackground'
+import AppModals from '../components/modals/AppModals'
+import { isViewRoute } from '../lib/routing/routes'
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState(null)
   const [showAuth, setShowAuth] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const [infoModal, setInfoModal] = useState<'credits' | 'terms' | 'support' | 'howItWorks' | null>(null)
-  const [files, setFiles] = useState<FileRecord[]>([])
+  const [infoModal, setInfoModal] = useState(null)
+  const [files, setFiles] = useState([])
   const [loadingFiles, setLoadingFiles] = useState(false)
 
   useEffect(() => {
@@ -94,7 +22,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const fetchFiles = useCallback(async (uid: string) => {
+  const fetchFiles = useCallback(async (uid) => {
     setLoadingFiles(true)
     try {
       const { data, error } = await supabase.storage.from(BUCKET).list(`${uid}/`, { sortBy: { column: 'created_at', order: 'desc' } })
@@ -110,8 +38,8 @@ export default function App() {
   useEffect(() => { if (user) fetchFiles(user.id); else setFiles([]) }, [user, fetchFiles])
 
   const handleSignOut = async () => { await supabase.auth.signOut(); toast.success('SIGNED OUT') }
-  const handleUploadSuccess = (file: FileRecord) => setFiles((prev) => [file, ...prev])
-  const handleDelete = (path: string) => setFiles((prev) => prev.filter((f) => f.path !== path))
+  const handleUploadSuccess = (file) => setFiles((prev) => [file, ...prev])
+  const handleDelete = (path) => setFiles((prev) => prev.filter((f) => f.path !== path))
 
   const totalBytes = files.reduce((s, f) => s + f.size, 0)
   const usedMB = (totalBytes / (1024 * 1024)).toFixed(1)
@@ -123,7 +51,7 @@ export default function App() {
   return (
     <div className="bg-background text-on-background min-h-screen flex flex-col relative font-body-md overflow-x-hidden">
       <div className="scanlines" />
-      <FloatingBg />
+      <AmbientBackground />
 
       {/* ── Nav Bar ── */}
       <nav className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-surface border-b-2 border-primary shadow-[4px_4px_0px_0px_rgba(221,183,255,0.3)]">
@@ -161,57 +89,16 @@ export default function App() {
       </nav>
 
       {/* ── Modals ── */}
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-      {showProfile && user && <ProfilePanel user={user} onSignOut={handleSignOut} onClose={() => setShowProfile(false)} />}
-
-      {infoModal === 'howItWorks' && (
-        <InfoModal title="HOW_IT_WORKS.TXT" onClose={() => setInfoModal(null)}>
-          <ol className="flex flex-col gap-3">
-            {[['1.', 'SIGN UP — Create a free account using email or magic link.'], ['2.', 'DROP — Drag & drop any .TXT file into the upload terminal.'], ['3.', 'COPY LINK — Instantly get a shareable link to send to anyone.'], ['4.', 'RECEIVE — Anyone can open and download — no login needed.'], ['5.', 'MANAGE — Delete your drops from the dashboard any time.']].map(([n, t]) => (
-              <li key={n} className="flex gap-3"><span className="text-secondary font-bold shrink-0">{n}</span><span>{t}</span></li>
-            ))}
-          </ol>
-          <button onClick={() => { setInfoModal(null); setShowAuth(true) }} className="retro-button border-2 border-secondary bg-surface text-secondary hover:bg-secondary hover:text-on-secondary shadow-[4px_4px_0px_0px_var(--color-secondary)] mt-6 py-2.5 text-label-sm font-label-sm w-full flex items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-sm">rocket_launch</span>GET STARTED NOW
-          </button>
-        </InfoModal>
-      )}
-      {infoModal === 'credits' && (
-        <InfoModal title="CREDITS.TXT" onClose={() => setInfoModal(null)}>
-          <ul className="flex flex-col gap-2">
-            <li><span className="text-primary">BUILT WITH:</span> React 18 + Vite + TypeScript</li>
-            <li><span className="text-primary">STYLING:</span> Tailwind CSS v4 + Space Mono + JetBrains Mono</li>
-            <li><span className="text-primary">BACKEND:</span> Supabase Storage + Auth</li>
-            <li><span className="text-primary">ICONS:</span> Material Symbols Outlined</li>
-            <li><span className="text-primary">DESIGN:</span> 1999-era retro terminal aesthetic</li>
-          </ul>
-          <p className="mt-4 text-on-surface-variant/40 text-[10px]">© 199X BOXEDLINKS — ALL BYTES RESERVED</p>
-        </InfoModal>
-      )}
-      {infoModal === 'terms' && (
-        <InfoModal title="TERMS_OF_SERVICE.TXT" onClose={() => setInfoModal(null)}>
-          <ul className="flex flex-col gap-3 text-on-surface-variant/80">
-            {['Upload only files you own or have rights to share.', 'BoxedLinks is not responsible for uploaded content.', 'We may remove files that violate these terms.', 'Files may be deleted after 90 days of account inactivity.', 'Do not use for illegal or harmful content.', 'Free tier is limited to 512MB total storage.'].map((t) => (
-              <li key={t}>✦ {t}</li>
-            ))}
-          </ul>
-        </InfoModal>
-      )}
-      {infoModal === 'support' && (
-        <InfoModal title="SUPPORT_TERMINAL.EXE" onClose={() => setInfoModal(null)}>
-          <p className="mb-4">Reach us through one of the following channels:</p>
-          <ul className="flex flex-col gap-3">
-            <li><span className="text-secondary">EMAIL:</span><a href="mailto:support@boxedlinks.net" className="ml-2 text-primary hover:underline">support@boxedlinks.net</a></li>
-            <li><span className="text-secondary">COMMON ISSUES:</span>
-              <ul className="ml-4 mt-2 flex flex-col gap-1 text-on-surface-variant/80">
-                <li>• RLS policy error → Set Supabase bucket policies.</li>
-                <li>• Upload failing → Ensure file is .TXT under 5MB.</li>
-                <li>• File not loading → Check your internet connection.</li>
-              </ul>
-            </li>
-          </ul>
-        </InfoModal>
-      )}
+      <AppModals
+        showAuth={showAuth}
+        setShowAuth={setShowAuth}
+        showProfile={showProfile}
+        user={user}
+        handleSignOut={handleSignOut}
+        setShowProfile={setShowProfile}
+        infoModal={infoModal}
+        setInfoModal={setInfoModal}
+      />
 
       {/* ── Main Content ── */}
       <main className="flex-grow pt-24 px-4 md:px-margin max-w-7xl mx-auto w-full flex flex-col gap-12 relative z-10 pb-20">

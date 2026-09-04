@@ -1,9 +1,9 @@
-import { supabase } from './supabase'
+import { supabase } from './supabase.js'
 
 /**
  * Generate a random short code (8 characters, alphanumeric)
  */
-function generateShortCode(): string {
+function generateShortCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let code = ''
   for (let i = 0; i < 8; i++) {
@@ -15,7 +15,7 @@ function generateShortCode(): string {
 /**
  * Create or retrieve a short link for a given file path
  */
-export async function createShortLink(filePath: string): Promise<string> {
+export async function createShortLink(filePath) {
   try {
     // Get current user
     const { data: { session } } = await supabase.auth.getSession()
@@ -77,7 +77,7 @@ export async function createShortLink(filePath: string): Promise<string> {
 /**
  * Resolve a short code to its full file path
  */
-export async function resolveShortLink(shortCode: string): Promise<string | null> {
+export async function resolveShortLink(shortCode) {
   try {
     const { data, error } = await supabase
       .from('short_links')

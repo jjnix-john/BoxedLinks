@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { getPublicUrl } from '../lib/supabase'
-import { resolveShortLink } from '../lib/shortLinks'
+import { getPublicUrl } from '../../lib/services/supabase'
+import { resolveShortLink } from '../../lib/services/shortLinks'
 
-type ContentMode = 'text' | 'image' | 'audio' | 'video' | 'binary'
-
-function getContentMode(name: string): ContentMode {
+function getContentMode(name) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
   if (['png','jpg','jpeg','gif','webp','bmp','svg','ico'].includes(ext)) return 'image'
   if (['mp3','wav','ogg','flac','m4a'].includes(ext)) return 'audio'
@@ -14,7 +12,7 @@ function getContentMode(name: string): ContentMode {
   return 'binary'
 }
 
-function formatBytes(b: number) {
+function formatBytes(b) {
   if (b < 1024) return `${b} B`
   if (b < 1048576) return `${(b / 1024).toFixed(1)} KB`
   return `${(b / 1048576).toFixed(1)} MB`
@@ -32,13 +30,13 @@ export default function FileViewer() {
   
   let filePath = directPath ?? ''
 
-  const [content, setContent] = useState<string | null>(null)
+  const [content, setContent] = useState(null)
   const [fileName, setFileName] = useState('')
   const [fileSize, setFileSize] = useState(0)
   const [publicUrl, setPublicUrl] = useState('')
-  const [mode, setMode] = useState<ContentMode>('binary')
+  const [mode, setMode] = useState('binary')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     // If short code is provided, resolve it first
@@ -65,7 +63,7 @@ export default function FileViewer() {
     }
   }, [shortCode, directPath])
 
-  function loadFile(path: string) {
+  function loadFile(path) {
     if (!path) return
     const parts = path.split('/')
     const name = parts[parts.length - 1].replace(/^\d+-/, '')
@@ -82,7 +80,7 @@ export default function FileViewer() {
           return res.text()
         })
         .then((text) => { setContent(text); setFileSize(new Blob([text]).size); setLoading(false) })
-        .catch((err: unknown) => { setError(err instanceof Error ? err.message : 'FAILED TO EXTRACT.'); setLoading(false) })
+        .catch((err) => { setError(err instanceof Error ? err.message : 'FAILED TO EXTRACT.'); setLoading(false) })
     } else {
       // For binary/image/audio/video just HEAD to get size
       fetch(url, { method: 'HEAD' })
@@ -92,7 +90,7 @@ export default function FileViewer() {
           if (len) setFileSize(parseInt(len, 10))
           setLoading(false)
         })
-        .catch((err: unknown) => { setError(err instanceof Error ? err.message : 'FAILED TO LOCATE FILE.'); setLoading(false) })
+        .catch((err) => { setError(err instanceof Error ? err.message : 'FAILED TO LOCATE FILE.'); setLoading(false) })
     }
   }
 

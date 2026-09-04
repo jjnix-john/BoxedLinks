@@ -1,18 +1,15 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../../lib/services/supabase'
 
-interface AuthModalProps { onClose: () => void }
-type Mode = 'signin' | 'signup'
-
-export default function AuthModal({ onClose }: AuthModalProps) {
-  const [mode, setMode] = useState<Mode>('signin')
+export default function AuthModal({ onClose }) {
+  const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
@@ -26,7 +23,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       if (error) throw error
       toast.success('WELCOME BACK OPERATOR!')
       onClose()
-    } catch (err: unknown) {
+    } catch (err) {
       toast.error(err instanceof Error ? err.message : 'AUTHENTICATION FAILED.')
     } finally { setLoading(false) }
   }
@@ -59,7 +56,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
           {/* Mode tabs */}
           <div className="grid grid-cols-2 gap-1 bg-surface p-1 border border-outline-variant">
-            {(['signin', 'signup'] as Mode[]).map((m) => (
+            {['signin', 'signup'].map((m) => (
               <button key={m} type="button" onClick={() => setMode(m)}
                 className={`py-2 font-label-sm text-label-sm uppercase tracking-wider transition-colors ${mode === m ? 'bg-primary text-on-primary font-bold' : 'text-on-surface-variant hover:text-primary'}`}>
                 {m === 'signin' ? 'SIGN IN' : 'SIGN UP'}
