@@ -11,18 +11,21 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       position="bottom-right"
       toastOptions={{
         style: {
-          background: '#1e293b',
-          color: '#f1f5f9',
-          border: '1px solid #334155',
-          borderRadius: '12px',
-          fontFamily: 'Inter, sans-serif',
+          background: '#e8edf4',
+          color: '#273043',
+          border: 'none',
+          borderRadius: '16px',
+          padding: '12px 16px',
+          boxShadow: '8px 8px 18px rgba(158,172,196,0.55), -8px -8px 18px rgba(255,255,255,0.95)',
+          fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+          fontWeight: 600,
           fontSize: '14px',
         },
         success: {
-          iconTheme: { primary: '#6366f1', secondary: '#f1f5f9' },
+          iconTheme: { primary: '#1fbfb0', secondary: '#ffffff' },
         },
         error: {
-          iconTheme: { primary: '#ef4444', secondary: '#f1f5f9' },
+          iconTheme: { primary: '#ef4f73', secondary: '#ffffff' },
         },
       }}
     />

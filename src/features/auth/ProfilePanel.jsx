@@ -1,36 +1,49 @@
+import Icon from '../../components/ui/Icon'
+
 export default function ProfilePanel({ user, onSignOut, onClose }) {
-  const joined = new Date(user.created_at ?? '').toLocaleDateString()
+  const joined = new Date(user.created_at ?? '').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  const handle = user.email?.split('@')[0] ?? 'user'
+
+  const rows = [
+    { label: 'User ID', value: `${user.id.slice(0, 12)}…`, icon: 'fingerprint', mono: true },
+    { label: 'Provider', value: user.app_metadata?.provider ?? 'email', icon: 'verified_user', capitalize: true },
+    { label: 'Status', value: 'Online', icon: 'radio_button_checked', tone: 'text-aqua' },
+  ]
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="w-full max-w-sm bg-surface-container border-2 border-primary shadow-[10px_10px_0px_0px_var(--color-primary)]" onClick={(event) => event.stopPropagation()}>
-        <div className="bg-surface-container-high border-b-2 border-primary px-4 py-2 flex items-center justify-between font-label-sm text-label-sm text-primary">
-          <span className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-            OPERATOR_PROFILE.DAT
-          </span>
-          <button onClick={onClose} className="retro-button w-5 h-5 bg-primary text-on-primary flex items-center justify-center font-bold text-xs hover:bg-secondary hover:text-on-secondary transition-colors">✕</button>
-        </div>
-        <div className="p-6 flex flex-col gap-5">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-primary-container/20 border-2 border-primary flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_circle</span>
-            </div>
-            <div>
-              <div className="font-headline-md text-sm text-primary font-bold uppercase">{user.email?.split('@')[0]}</div>
-              <div className="font-label-sm text-label-sm text-on-surface-variant">{user.email}</div>
-              <div className="font-label-sm text-[10px] text-on-surface-variant/50 mt-1">JOINED: {joined}</div>
+    <div className="neu-backdrop" onClick={onClose}>
+      <div className="neu-modal neu-raised-lg w-full max-w-sm p-7 relative" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="profile-title">
+        <button id="profile-close" onClick={onClose} className="neu-icon-btn absolute top-5 right-5" aria-label="Close">
+          <Icon name="close" className="text-xl" />
+        </button>
+
+        <div className="flex flex-col items-center text-center gap-3 pt-2">
+          <div className="neu-well w-24 h-24 !rounded-[8px]">
+            <div className="w-[4.5rem] h-[4.5rem] rounded-[6px] bg-accent-grad flex items-center justify-center text-white text-3xl font-bold font-[family-name:var(--font-display)] uppercase shadow-md">
+              {handle.charAt(0)}
             </div>
           </div>
-          <div className="border border-outline-variant divide-y divide-outline-variant font-label-sm text-label-sm">
-            <div className="flex justify-between px-3 py-2"><span className="text-on-surface-variant/60">USER ID</span><span className="text-primary font-bold truncate max-w-[180px]">{user.id.slice(0, 16)}…</span></div>
-            <div className="flex justify-between px-3 py-2"><span className="text-on-surface-variant/60">PROVIDER</span><span className="text-primary font-bold uppercase">{user.app_metadata?.provider ?? 'EMAIL'}</span></div>
-            <div className="flex justify-between px-3 py-2"><span className="text-on-surface-variant/60">STATUS</span><span className="text-secondary font-bold">● ONLINE</span></div>
+          <div>
+            <h2 id="profile-title" className="text-xl font-bold text-ink capitalize">{handle}</h2>
+            <p className="text-sm text-ink-soft">{user.email}</p>
+            <span className="neu-pill neu-pill-inset mt-3">
+              <Icon name="calendar_today" className="text-sm" />Joined {joined}
+            </span>
           </div>
-          <button onClick={() => { onSignOut(); onClose() }} className="retro-button border-2 border-error bg-surface text-error hover:bg-error hover:text-on-error shadow-[4px_4px_0px_0px_var(--color-error)] py-2.5 text-label-sm font-label-sm flex items-center justify-center gap-2 w-full">
-            <span className="material-symbols-outlined text-sm">logout</span>SIGN OUT
-          </button>
         </div>
+
+        <div className="neu-inset p-2 mt-6 flex flex-col">
+          {rows.map((r) => (
+            <div key={r.label} className="flex items-center justify-between px-3 py-3 text-sm">
+              <span className="flex items-center gap-2 text-ink-faint"><Icon name={r.icon} className="text-lg" />{r.label}</span>
+              <span className={`font-semibold ${r.tone ?? 'text-ink'} ${r.mono ? 'font-mono text-xs' : ''} ${r.capitalize ? 'capitalize' : ''}`}>{r.value}</span>
+            </div>
+          ))}
+        </div>
+
+        <button id="profile-signout" onClick={() => { onSignOut(); onClose() }} className="neu-btn neu-btn-danger w-full py-3 mt-6 text-sm">
+          <Icon name="logout" className="text-lg" />Sign out
+        </button>
       </div>
     </div>
   )

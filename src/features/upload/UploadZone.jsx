@@ -3,6 +3,8 @@ import toast from 'react-hot-toast'
 import { supabase, BUCKET, getPublicUrl } from '../../lib/services/supabase'
 import { validateFile, allowedExtensionsList, MAX_FILE_SIZE_BYTES } from '../../lib/security/fileValidator'
 import { createShortLink } from '../../lib/services/shortLinks'
+import Icon from '../../components/ui/Icon'
+
 function extIcon(name) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico'].includes(ext)) return 'image'
@@ -36,12 +38,12 @@ export default function UploadZone({ user, onUploadSuccess }) {
     const result = await validateFile(file)
     setScanning(false)
     if (!result.valid) {
-      setError(result.error ?? 'FILE REJECTED')
-      toast.error(result.error ?? 'FILE REJECTED')
+      setError(result.error ?? 'File rejected')
+      toast.error(result.error ?? 'File rejected')
       return
     }
     setSelectedFile(file)
-    toast.success('FILE CLEARED — READY TO TRANSMIT')
+    toast.success('File checked — ready to upload')
   }, [])
 
   const onDragOver = (e) => { e.preventDefault(); setIsDragging(true) }
@@ -70,84 +72,80 @@ export default function UploadZone({ user, onUploadSuccess }) {
       const publicUrl = getPublicUrl(filePath)
       const shortLink = await createShortLink(filePath)
       await navigator.clipboard.writeText(shortLink)
-      toast.success('DROP LINK COPIED TO CLIPBOARD!')
+      toast.success('Link copied to clipboard!')
       onUploadSuccess({ name: selectedFile.name, path: filePath, publicUrl, size: selectedFile.size, createdAt: new Date().toISOString() })
       setSelectedFile(null)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'TRANSMISSION FAILED'
+      const msg = err instanceof Error ? err.message : 'Upload failed'
       setError(msg); toast.error(msg)
     } finally { setUploading(false) }
   }
 
   if (!user) {
     return (
-      <div className="bg-surface-container border-2 border-primary shadow-[8px_8px_0px_0px_rgba(221,183,255,0.3)]">
-        <div className="bg-surface-container-high border-b-2 border-primary px-4 py-2 flex items-center justify-between font-label-sm text-label-sm text-primary">
-          <span className="flex items-center gap-2"><span className="material-symbols-outlined text-sm">terminal</span>UPLOAD_TERMINAL.EXE</span>
-          <span className="text-on-surface-variant">SYSTEM_LOCKED</span>
+      <section className="neu-raised p-10 text-center flex flex-col items-center gap-4">
+        <div className="neu-well w-20 h-20 text-ink-faint"><Icon name="lock" fill className="text-4xl" /></div>
+        <div>
+          <h3 className="text-xl font-bold text-ink">Sign in required</h3>
+          <p className="text-sm text-ink-soft mt-1">Please sign in to drop files to BoxedLinks.</p>
         </div>
-        <div className="p-8 text-center flex flex-col items-center gap-4">
-          <div className="w-16 h-16 border-2 border-primary bg-surface flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-          </div>
-          <div>
-            <h3 className="font-headline-md text-headline-md font-bold text-primary uppercase">AUTHENTICATION REQUIRED</h3>
-            <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">PLEASE SIGN IN TO DROP FILES TO BOXEDLINKS.</p>
-          </div>
-        </div>
-      </div>
+      </section>
     )
   }
 
+  const state = scanning ? 'scanning' : isDragging ? 'dragging' : selectedFile ? 'selected' : 'idle'
+  const stateIconColor = { scanning: 'text-violet', dragging: 'text-aqua', selected: 'text-accent', idle: 'text-accent' }[state]
+
   return (
-    <div className="bg-surface-container border-2 border-primary shadow-[8px_8px_0px_0px_rgba(221,183,255,0.3)]">
-      {/* Window title bar */}
-      <div className="bg-surface-container-high border-b-2 border-primary px-4 py-2 flex items-center justify-between font-label-sm text-label-sm text-primary">
-        <span className="flex items-center gap-2 tracking-wider">
-          <span className="material-symbols-outlined text-sm">terminal</span>
-          UPLOAD_TERMINAL.EXE
-        </span>
+    <section className="neu-raised">
+      <div className="neu-card-header">
+        <h2 className="text-lg font-bold text-ink flex items-center gap-2.5">
+          <div className="neu-well w-9 h-9 text-accent"><Icon name="cloud_upload" fill className="text-xl" /></div>
+          Upload a file
+        </h2>
         <div className="flex items-center gap-3">
-          {/* Security badge */}
-          <span className="flex items-center gap-1 text-secondary text-[10px] font-label-sm border border-secondary/40 px-2 py-0.5">
-            <span className="material-symbols-outlined text-sm">shield</span>SCAN ENABLED
-          </span>
-          <button onClick={() => { setSelectedFile(null); setError(null) }} className="hover:text-secondary transition-colors">✕</button>
+          <span className="neu-pill text-aqua"><Icon name="shield" fill className="text-sm" />Scan enabled</span>
+          {(selectedFile || error) && (
+            <button id="upload-reset" onClick={() => { setSelectedFile(null); setError(null) }} className="neu-icon-btn w-9 h-9" aria-label="Clear selection">
+              <Icon name="close" className="text-lg" />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="p-6 flex flex-col gap-4 bg-surface-container-low">
-        {/* Drop zone */}
+      <div className="p-6 flex flex-col gap-5">
+        {/* Drop zone with minimal corners (6px) */}
         <label
           htmlFor="upload-input"
           onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-          className={`border-2 border-dashed p-10 flex flex-col items-center justify-center cursor-pointer transition-all duration-150 select-none ${
-            scanning   ? 'border-tertiary bg-tertiary/10 text-tertiary'
-            : isDragging ? 'border-secondary bg-secondary/10 text-secondary'
-            : selectedFile ? 'border-primary bg-primary/10 text-primary'
-            : 'border-primary/60 bg-surface hover:border-primary text-primary'
+          className={`group relative rounded-[6px] border border-purple-200/50 px-6 py-12 flex flex-col items-center justify-center cursor-pointer select-none transition-all duration-300 bg-base ${
+            state === 'dragging' ? 'shadow-[var(--neu-inset)] ring-2 ring-purple-500/50' : state === 'idle' ? 'shadow-[var(--neu-inset)] hover:shadow-[var(--neu-inset-sm)]' : 'shadow-[var(--neu-inset)]'
           }`}
         >
           <input id="upload-input" type="file" onChange={onInputChange} className="hidden" />
 
+          <div className={`neu-well w-24 h-24 mb-5 !rounded-[6px] transition-transform duration-300 ${state === 'dragging' ? 'scale-110' : 'group-hover:-translate-y-1'}`}>
+            <Icon
+              name={scanning ? 'radar' : selectedFile ? extIcon(selectedFile.name) : 'upload_file'}
+              fill
+              className={`text-5xl ${stateIconColor} ${scanning ? 'animate-spin' : ''}`}
+            />
+          </div>
+
           {scanning ? (
             <>
-              <span className="material-symbols-outlined text-6xl mb-3 animate-spin" style={{ fontVariationSettings: "'FILL' 1" }}>radar</span>
-              <span className="font-headline-md font-bold text-headline-md uppercase">SCANNING FOR THREATS...</span>
-              <span className="font-label-sm text-label-sm text-on-surface-variant mt-2">RUNNING SECURITY CHECKS</span>
+              <span className="text-lg font-bold text-ink font-[family-name:var(--font-display)]">Scanning for threats…</span>
+              <span className="text-sm text-ink-soft mt-1">Running security checks</span>
             </>
           ) : (
             <>
-              <span className="material-symbols-outlined text-6xl mb-3" style={{ fontVariationSettings: "'FILL' 1" }}>
-                {selectedFile ? extIcon(selectedFile.name) : 'upload_file'}
+              <span className="text-lg font-bold text-ink text-center break-all font-[family-name:var(--font-display)]">
+                {selectedFile ? selectedFile.name : isDragging ? 'Release to drop' : 'Drag a file here or click to browse'}
               </span>
-              <span className="font-headline-md font-bold text-headline-md uppercase tracking-wider text-center">
-                {selectedFile ? selectedFile.name : 'DRAG FILES HERE TO DROP'}
-              </span>
-              <span className="font-label-sm text-label-sm text-on-surface-variant mt-2 text-center">
+              <span className="text-sm text-ink-soft mt-1 text-center">
                 {selectedFile
-                  ? `${formatBytes(selectedFile.size)} — CLICK TO REPLACE`
-                  : `Drop any file up to ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB — all common formats accepted`}
+                  ? `${formatBytes(selectedFile.size)} · click to replace`
+                  : `Up to ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB — all common formats accepted`}
               </span>
             </>
           )}
@@ -156,14 +154,15 @@ export default function UploadZone({ user, onUploadSuccess }) {
         {/* Allowed types toggle */}
         <div>
           <button
+            id="upload-toggle-allowed"
             onClick={() => setShowAllowed((v) => !v)}
-            className="font-label-sm text-label-sm text-on-surface-variant/60 hover:text-secondary transition-colors flex items-center gap-1"
+            className="text-sm font-medium text-ink-faint hover:text-accent transition-colors flex items-center gap-1"
           >
-            <span className="material-symbols-outlined text-sm">{showAllowed ? 'expand_less' : 'expand_more'}</span>
-            {showAllowed ? 'HIDE' : 'VIEW'} ALLOWED FILE TYPES
+            <Icon name={showAllowed ? 'expand_less' : 'expand_more'} className="text-lg" />
+            {showAllowed ? 'Hide' : 'View'} allowed file types
           </button>
           {showAllowed && (
-            <div className="mt-2 p-3 bg-surface border border-outline-variant font-label-sm text-[10px] text-on-surface-variant/70 leading-5">
+            <div className="neu-inset-sm mt-3 p-4 font-mono text-[11px] text-ink-soft leading-5 animate-fade-in">
               {allowedExtensionsList()}
             </div>
           )}
@@ -171,27 +170,26 @@ export default function UploadZone({ user, onUploadSuccess }) {
 
         {/* Error message */}
         {error && (
-          <div className="border-2 border-error bg-error-container/40 text-error p-3 font-label-sm text-label-sm flex items-start justify-between gap-3">
-            <div className="flex items-start gap-2">
-              <span className="material-symbols-outlined text-base shrink-0 mt-0.5">gpp_bad</span>
-              <span>{error}</span>
-            </div>
-            <button onClick={() => setError(null)} className="shrink-0 hover:text-on-error">✕</button>
+          <div className="neu-notice" role="alert">
+            <Icon name="gpp_bad" fill className="text-lg text-rose shrink-0" />
+            <span className="flex-1 text-ink-soft">{error}</span>
+            <button onClick={() => setError(null)} className="text-ink-faint hover:text-rose" aria-label="Dismiss error">
+              <Icon name="close" className="text-lg" />
+            </button>
           </div>
         )}
 
         {/* Upload button */}
         {selectedFile && !scanning && (
-          <button onClick={handleUpload} disabled={uploading}
-            className="retro-button border-2 border-secondary bg-surface text-secondary hover:bg-secondary hover:text-on-secondary shadow-[4px_4px_0px_0px_var(--color-secondary)] py-3 px-6 font-label-md text-label-md flex items-center justify-center gap-2 w-full mt-2">
+          <button id="upload-submit" onClick={handleUpload} disabled={uploading} className="neu-btn-accent w-full py-3.5 text-base animate-rise">
             {uploading ? (
-              <><span className="material-symbols-outlined animate-spin text-base">sync</span>TRANSMITTING...</>
+              <><Icon name="progress_activity" className="animate-spin text-xl" />Uploading…</>
             ) : (
-              <><span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>send</span>TRANSMIT DROP & COPY LINK</>
+              <><Icon name="send" fill className="text-xl" />Upload & copy link</>
             )}
           </button>
         )}
       </div>
-    </div>
+    </section>
   )
 }

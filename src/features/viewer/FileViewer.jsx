@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { getPublicUrl } from '../../lib/services/supabase'
 import { resolveShortLink } from '../../lib/services/shortLinks'
+import AmbientBackground from '../../components/layout/AmbientBackground'
+import Icon from '../../components/ui/Icon'
+import Logo from '../../components/ui/Logo'
 
 function getContentMode(name) {
   const ext = name.split('.').pop()?.toLowerCase() ?? ''
@@ -44,7 +47,7 @@ export default function FileViewer() {
       resolveShortLink(shortCode)
         .then((resolved) => {
           if (!resolved) {
-            setError('SHORT LINK NOT FOUND.')
+            setError('This short link could not be found.')
             setLoading(false)
             return
           }
@@ -52,13 +55,13 @@ export default function FileViewer() {
           loadFile(resolved)
         })
         .catch(() => {
-          setError('FAILED TO RESOLVE SHORT LINK.')
+          setError('Failed to resolve this short link.')
           setLoading(false)
         })
     } else if (filePath) {
       loadFile(filePath)
     } else {
-      setError('NO TRANSMISSION PATH SPECIFIED.')
+      setError('No file was specified in this link.')
       setLoading(false)
     }
   }, [shortCode, directPath])
@@ -76,25 +79,25 @@ export default function FileViewer() {
     if (contentMode === 'text') {
       fetch(url)
         .then((res) => {
-          if (!res.ok) throw new Error(`TRANSMISSION NOT FOUND (${res.status})`)
+          if (!res.ok) throw new Error(`File not found (${res.status})`)
           return res.text()
         })
         .then((text) => { setContent(text); setFileSize(new Blob([text]).size); setLoading(false) })
-        .catch((err) => { setError(err instanceof Error ? err.message : 'FAILED TO EXTRACT.'); setLoading(false) })
+        .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to load file.'); setLoading(false) })
     } else {
       // For binary/image/audio/video just HEAD to get size
       fetch(url, { method: 'HEAD' })
         .then((res) => {
-          if (!res.ok) throw new Error(`TRANSMISSION NOT FOUND (${res.status})`)
+          if (!res.ok) throw new Error(`File not found (${res.status})`)
           const len = res.headers.get('content-length')
           if (len) setFileSize(parseInt(len, 10))
           setLoading(false)
         })
-        .catch((err) => { setError(err instanceof Error ? err.message : 'FAILED TO LOCATE FILE.'); setLoading(false) })
+        .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to locate file.'); setLoading(false) })
     }
   }
 
-  const copyLink = () => { navigator.clipboard.writeText(window.location.href); toast.success('TRANSMISSION LINK COPIED!') }
+  const copyLink = () => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!') }
 
   const downloadFile = async () => {
     try {
@@ -104,112 +107,104 @@ export default function FileViewer() {
       const url = URL.createObjectURL(blob)
       const a = Object.assign(document.createElement('a'), { href: url, download: fileName })
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
-      toast.success('DOWNLOAD STARTED!')
-    } catch { toast.error('DOWNLOAD FAILED') }
+      toast.success('Download started!')
+    } catch { toast.error('Download failed') }
   }
 
   function ContentPreview() {
     if (mode === 'image') return (
-      <img src={publicUrl} alt={fileName} className="max-w-full max-h-64 border border-outline-variant object-contain" />
+      <img src={publicUrl} alt={fileName} className="max-w-full max-h-72 rounded-xl object-contain" />
     )
     if (mode === 'audio') return (
-      <audio controls src={publicUrl} className="w-full mt-2" style={{ filter: 'invert(1) hue-rotate(180deg)' }} />
+      <audio controls src={publicUrl} className="w-full" />
     )
     if (mode === 'video') return (
-      <video controls src={publicUrl} className="w-full max-h-48 border border-outline-variant" />
+      <video controls src={publicUrl} className="w-full max-h-64 rounded-xl" />
     )
     if (mode === 'text' && content !== null) return (
-      <pre className="w-full max-h-48 overflow-y-auto text-left font-label-sm text-label-sm bg-surface-container-lowest border border-outline-variant p-3 text-on-surface whitespace-pre-wrap break-all scrollbar-retro mt-1">
+      <pre className="w-full max-h-56 overflow-y-auto text-left font-mono text-xs text-ink-soft whitespace-pre-wrap break-all neu-scroll">
         {content}
       </pre>
     )
     // binary — no preview
     return (
-      <div className="flex flex-col items-center gap-2 py-4 text-on-surface-variant/60">
-        <span className="material-symbols-outlined text-4xl">folder_zip</span>
-        <span className="font-label-sm text-label-sm">PREVIEW NOT AVAILABLE — DOWNLOAD TO OPEN</span>
+      <div className="flex flex-col items-center gap-3 py-6 text-ink-faint">
+        <div className="neu-well w-14 h-14"><Icon name="folder_zip" className="text-3xl" /></div>
+        <span className="text-sm">Preview not available — download to open</span>
       </div>
     )
   }
 
   return (
-    <div className="bg-background text-on-background min-h-screen flex flex-col items-center justify-center p-4 relative font-body-md overflow-x-hidden">
-      <div className="scanlines" />
-      {/* Ambient bg */}
-      <div className="floating-bg" aria-hidden="true">
-        <span className="material-symbols-outlined absolute top-[15%] left-[10%] text-primary/20 text-6xl animate-float-slow" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>
-        <span className="material-symbols-outlined absolute bottom-[20%] right-[15%] text-secondary/20 text-5xl animate-float-medium" style={{ fontVariationSettings: "'FILL' 1" }}>cloud</span>
-        <span className="material-symbols-outlined absolute top-[40%] left-[5%] text-tertiary/15 text-4xl animate-float-fast" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-      </div>
+    <div className="bg-base text-ink min-h-screen flex flex-col items-center justify-center p-4 relative overflow-x-hidden">
+      <AmbientBackground />
 
-      {/* Main window */}
-      <div className="w-full max-w-xl bg-surface-container border-2 border-primary shadow-[12px_12px_0px_0px_rgba(221,183,255,0.4)] relative z-10">
-        {/* Title bar */}
-        <div className="bg-surface-container-high border-b-2 border-primary px-4 py-2 flex items-center justify-between font-label-sm text-label-sm text-primary">
-          <span className="flex items-center gap-2 tracking-wider">
-            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>download</span>
-            SYSTEM.TRANSFER
-          </span>
-          <button onClick={() => (window.location.href = '/')}
-            className="retro-button w-5 h-5 bg-primary text-on-primary flex items-center justify-center font-bold text-xs hover:bg-secondary hover:text-on-secondary transition-colors">✕</button>
-        </div>
+      <a href="/" className="relative z-10 mb-8" aria-label="BoxedLinks home">
+        <Logo />
+      </a>
 
-        <div className="p-6 md:p-8 flex flex-col items-center text-center gap-6">
+      <main className="neu-raised-lg w-full max-w-xl relative z-10 p-7 md:p-10 animate-rise">
+        <button id="viewer-close" onClick={() => (window.location.href = '/')} className="neu-icon-btn absolute top-5 right-5" aria-label="Back to home">
+          <Icon name="close" className="text-xl" />
+        </button>
+
+        <div className="flex flex-col items-center text-center gap-7">
           {loading ? (
-            <div className="py-12 flex flex-col items-center gap-4">
-              <span className="material-symbols-outlined text-5xl text-primary animate-spin">sync</span>
-              <p className="font-headline-md font-bold text-label-md text-primary">DECODING TRANSMISSION...</p>
+            <div className="py-12 flex flex-col items-center gap-5">
+              <div className="neu-well w-20 h-20 text-accent"><Icon name="progress_activity" className="text-4xl animate-spin" /></div>
+              <p className="font-semibold text-ink-soft">Fetching your file…</p>
             </div>
           ) : error ? (
             <div className="py-8 flex flex-col items-center gap-4 w-full">
-              <span className="material-symbols-outlined text-5xl text-error">warning</span>
-              <h2 className="font-headline-md font-bold text-headline-md text-error">TRANSMISSION ERROR</h2>
-              <p className="font-label-sm text-label-sm text-on-surface-variant">{error}</p>
-              <button onClick={() => (window.location.href = '/')}
-                className="retro-button border-2 border-primary bg-surface text-primary hover:bg-primary hover:text-on-primary shadow-[4px_4px_0px_0px_rgba(221,183,255,1)] py-2 px-6 font-label-sm text-label-sm mt-2">
-                RETURN TO TERMINAL
+              <div className="neu-well w-20 h-20 text-rose"><Icon name="link_off" className="text-4xl" /></div>
+              <h1 className="text-2xl font-bold text-ink">Link unavailable</h1>
+              <p className="text-sm text-ink-soft">{error}</p>
+              <button id="viewer-home" onClick={() => (window.location.href = '/')} className="neu-btn-accent py-3 px-6 text-sm mt-2">
+                <Icon name="home" className="text-lg" />Back to BoxedLinks
               </button>
             </div>
           ) : (
             <>
-              <div>
-                <h1 className="font-headline-md text-headline-md md:text-headline-lg font-bold text-tertiary tracking-wider uppercase drop-shadow-[2px_2px_0px_rgba(78,21,93,1)]">
-                  YOU RECEIVED A DROP !
-                </h1>
-                <p className="font-label-sm text-label-sm text-on-surface-variant mt-2">A secure transmission is ready for extraction.</p>
+              <div className="flex flex-col items-center gap-4">
+                <div className="neu-well w-20 h-20 !rounded-[8px]">
+                  <div className="w-14 h-14 rounded-[6px] bg-accent-grad text-white flex items-center justify-center shadow-[0_8px_20px_-6px_rgba(124,58,237,0.6)]">
+                    <Icon name="redeem" fill className="text-3xl" />
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold text-ink">Someone sent you a file</h1>
+                  <p className="text-sm text-ink-soft mt-1.5">It's ready to preview and download.</p>
+                </div>
               </div>
 
-              {/* File preview box */}
-              <div className="w-full bg-surface border-2 border-outline-variant p-4 flex flex-col items-center gap-3">
-                {/* File info badge */}
-                <div className="inline-flex items-center gap-2 border border-primary/40 bg-surface-container px-3 py-1 font-label-sm text-label-sm text-primary">
-                  <span className="material-symbols-outlined text-sm">lock</span>
-                  <span className="font-bold">{fileName}</span>
-                  {fileSize > 0 && <span className="text-on-surface-variant/60">({formatBytes(fileSize)})</span>}
+              {/* File preview */}
+              <div className="neu-inset w-full p-5 flex flex-col items-center gap-4">
+                <div className="neu-pill max-w-full">
+                  <Icon name="lock" fill className="text-sm text-aqua" />
+                  <span className="font-semibold text-ink truncate">{fileName}</span>
+                  {fileSize > 0 && <span className="text-ink-faint shrink-0">· {formatBytes(fileSize)}</span>}
                 </div>
                 <ContentPreview />
               </div>
 
-              {/* Action buttons */}
+              {/* Actions */}
               <div className="grid grid-cols-2 gap-4 w-full">
-                <button onClick={downloadFile}
-                  className="retro-button border-2 border-primary bg-surface text-primary hover:bg-primary hover:text-on-primary shadow-[4px_4px_0px_0px_rgba(221,183,255,1)] py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-2 uppercase">
-                  DOWNLOAD<span className="material-symbols-outlined text-base">download</span>
+                <button id="viewer-download" onClick={downloadFile} className="neu-btn-accent py-3.5 px-4 text-sm">
+                  <Icon name="download" className="text-lg" />Download
                 </button>
-                <button onClick={copyLink}
-                  className="retro-button border-2 border-secondary bg-surface text-secondary hover:bg-secondary hover:text-on-secondary shadow-[4px_4px_0px_0px_var(--color-secondary)] py-3 px-4 font-label-md text-label-md flex items-center justify-center gap-2 uppercase">
-                  COPY LINK<span className="material-symbols-outlined text-base">link</span>
+                <button id="viewer-copy" onClick={copyLink} className="neu-btn py-3.5 px-4 text-sm">
+                  <Icon name="link" className="text-lg" />Copy link
                 </button>
               </div>
 
-              <div className="font-label-sm text-label-sm text-on-surface-variant/60 tracking-widest uppercase flex items-center gap-1">
-                <span className="material-symbols-outlined text-sm">shield</span>
-                SECURE TRANSMISSION — NO LOGIN REQUIRED
+              <div className="text-xs text-ink-faint flex items-center gap-1.5">
+                <Icon name="verified_user" fill className="text-sm text-aqua" />
+                Secure transfer — no login required
               </div>
             </>
           )}
         </div>
-      </div>
+      </main>
     </div>
   )
 }
